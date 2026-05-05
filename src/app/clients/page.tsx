@@ -248,7 +248,7 @@ function ClientModal({
     address: "",
     notes: "",
   });
-  const [errors, setErrors] = useState<{ name?: string; email?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string; general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when modal opens
@@ -283,11 +283,17 @@ function ClientModal({
   }, [isOpen]);
 
   const validateForm = (): boolean => {
-    const newErrors: { name?: string; email?: string } = {};
+    const newErrors: { name?: string; phone?: string; email?: string } = {};
+
 
     // Name validation
     if (!formData.name.trim()) {
       newErrors.name = "Name is required";
+    }
+
+    // Phone validation
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone is required";
     }
 
     // Email validation (only if filled)
@@ -420,7 +426,7 @@ function ClientModal({
                 htmlFor="phone"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
               >
-                Phone
+                Phone <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
@@ -428,10 +434,20 @@ function ClientModal({
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.phone
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
                 placeholder="(555) 123-4567"
                 autoComplete="tel"
               />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.phone}
+                </p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -534,16 +550,12 @@ function ClientModal({
 
 
       {/* Desktop Side Panel */}
-      <div className="hidden md:block fixed inset-y-0 right-0 z-50 flex">
+      <div className="hidden md:flex fixed inset-y-0 left-64 right-0 z-50">
         {/* Backdrop - subtle */}
-        <div
-          className="absolute inset-0 bg-black/20"
-          onClick={onClose}
-          aria-hidden="true"
-        />
+        <div className="flex-1 bg-black/20" onClick={onClose} aria-hidden="true" />
 
         {/* Panel */}
-        <div className="relative ml-auto w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full">
+        <div className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
@@ -604,7 +616,7 @@ function ClientModal({
                 htmlFor="phone-desktop"
                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
               >
-                Phone
+                Phone <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
@@ -612,10 +624,20 @@ function ClientModal({
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.phone
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
                 placeholder="(555) 123-4567"
                 autoComplete="tel"
               />
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.phone}
+                </p>
+              )}
             </div>
 
             {/* Email Field */}

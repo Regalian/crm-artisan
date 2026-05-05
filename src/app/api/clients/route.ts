@@ -1,16 +1,22 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
+// Dev bypass - set DEV_USER_ID env var to bypass auth (remove in production)
+const DEV_USER_ID: string | undefined = process.env.DEV_USER_ID;
+
 export async function GET() {
   try {
     const supabase = await createClient();
+    
+    // Use dev user if set
+    let userId: string | null | undefined = DEV_USER_ID;
+    
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -20,7 +26,7 @@ export async function GET() {
     const { data: clients, error: clientsError } = await supabase
       .from("clients")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("name", { ascending: true });
 
     if (clientsError) {
@@ -44,13 +50,16 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    
+    // Use dev user if set
+    let userId: string | null | undefined = DEV_USER_ID;
+    
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id;
+    }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
     const { data: client, error: insertError } = await supabase
       .from("clients")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         name: name.trim(),
         phone: phone?.trim() || null,
         email: email?.trim() || null,
