@@ -348,187 +348,374 @@ function ClientModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <>
+      {/* Mobile Modal - Centered */}
+      <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+          aria-hidden="true"
+        />
 
-      {/* Modal */}
-      <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md mx-auto overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
-            Add New Client
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-            aria-label="Close"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* General Error */}
-          {errors.general && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
-              <AlertCircle size={18} />
-              <span>{errors.general}</span>
-            </div>
-          )}
-
-          {/* Name Field */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                errors.name
-                  ? "border-red-500 dark:border-red-500"
-                  : "border-zinc-300 dark:border-zinc-700"
-              }`}
-              placeholder="John Smith"
-              autoComplete="name"
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                <AlertCircle size={14} />
-                {errors.name}
-              </p>
-            )}
-          </div>
-
-          {/* Phone Field */}
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              Phone
-            </label>
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="(555) 123-4567"
-              autoComplete="tel"
-            />
-          </div>
-
-          {/* Email Field */}
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                errors.email
-                  ? "border-red-500 dark:border-red-500"
-                  : "border-zinc-300 dark:border-zinc-700"
-              }`}
-              placeholder="john@example.com"
-              autoComplete="email"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                <AlertCircle size={14} />
-                {errors.email}
-              </p>
-            )}
-          </div>
-
-          {/* Address Field */}
-          <div>
-            <label
-              htmlFor="address"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              Address
-            </label>
-            <input
-              type="text"
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="123 Main St, City, State"
-              autoComplete="street-address"
-            />
-          </div>
-
-          {/* Notes Field */}
-          <div>
-            <label
-              htmlFor="notes"
-              className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
-            >
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
-              placeholder="Any additional notes about this client..."
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
+        {/* Modal */}
+        <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+              Add New Client
+            </h2>
             <button
-              type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-              disabled={isSubmitting}
+              className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+              aria-label="Close"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Client"
-              )}
+              <X size={20} />
             </button>
           </div>
-        </form>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* General Error */}
+            {errors.general && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                <AlertCircle size={18} />
+                <span>{errors.general}</span>
+              </div>
+            )}
+
+            {/* Name Field */}
+            <div>
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.name
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
+                placeholder="John Smith"
+                autoComplete="name"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
+            {/* Phone Field */}
+            <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Phone
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="(555) 123-4567"
+                autoComplete="tel"
+              />
+            </div>
+
+            {/* Email Field */}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.email
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
+                placeholder="john@example.com"
+                autoComplete="email"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Address Field */}
+            <div>
+              <label
+                htmlFor="address"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Address
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="123 Main St, City, State"
+                autoComplete="street-address"
+              />
+            </div>
+
+            {/* Notes Field */}
+            <div>
+              <label
+                htmlFor="notes"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Notes
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                placeholder="Any additional notes about this client..."
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Client"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+
+
+      {/* Desktop Side Panel */}
+      <div className="hidden md:block fixed inset-y-0 right-0 z-50 flex">
+        {/* Backdrop - subtle */}
+        <div
+          className="absolute inset-0 bg-black/20"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+
+        {/* Panel */}
+        <div className="relative ml-auto w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
+            <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+              Add New Client
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* General Error */}
+            {errors.general && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                <AlertCircle size={18} />
+                <span>{errors.general}</span>
+              </div>
+            )}
+
+            {/* Name Field */}
+            <div>
+              <label
+                htmlFor="name-desktop"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="name-desktop"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.name
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
+                placeholder="John Smith"
+                autoComplete="name"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
+            {/* Phone Field */}
+            <div>
+              <label
+                htmlFor="phone-desktop"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Phone
+              </label>
+              <input
+                type="tel"
+                id="phone-desktop"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="(555) 123-4567"
+                autoComplete="tel"
+              />
+            </div>
+
+            {/* Email Field */}
+            <div>
+              <label
+                htmlFor="email-desktop"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Email
+              </label>
+              <input
+                type="email"
+                id="email-desktop"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                  errors.email
+                    ? "border-red-500 dark:border-red-500"
+                    : "border-zinc-300 dark:border-zinc-700"
+                }`}
+                placeholder="john@example.com"
+                autoComplete="email"
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <AlertCircle size={14} />
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Address Field */}
+            <div>
+              <label
+                htmlFor="address-desktop"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Address
+              </label>
+              <input
+                type="text"
+                id="address-desktop"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="123 Main St, City, State"
+                autoComplete="street-address"
+              />
+            </div>
+
+            {/* Notes Field */}
+            <div>
+              <label
+                htmlFor="notes-desktop"
+                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1"
+              >
+                Notes
+              </label>
+              <textarea
+                id="notes-desktop"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                placeholder="Any additional notes about this client..."
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2 sticky bottom-0 bg-white dark:bg-zinc-900 pb-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Client"
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
   );
 }
 
