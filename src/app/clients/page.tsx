@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Phone, Mail, MapPin, AlertCircle, Loader2, UserPlus, X, CheckCircle } from "lucide-react";
+import { Search, Phone, Mail, MapPin, AlertCircle, Loader2, UserPlus, X, CheckCircle, Trash2 } from "lucide-react";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -96,50 +96,64 @@ function NoResultsState({ searchTerm }: { searchTerm: string }) {
 }
 
 // Client Card Component (for mobile)
-function ClientCard({ client }: { client: Client }) {
+function ClientCard({ client, onEdit, onDelete }: { client: Client; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
-    <div className="bg-white dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 mb-3">
-      <h3 className="font-semibold text-zinc-900 dark:text-white text-lg mb-2">
-        {client.name}
-      </h3>
-      <div className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-        <a
-          href={`tel:${client.phone}`}
-          className="flex items-center gap-2 hover:text-blue-600 transition-colors"
-        >
-          <Phone size={16} />
-          <span>{client.phone}</span>
-        </a>
-        {client.email && (
+    <div className="bg-white dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 mb-3 relative">
+      {/* Delete button - top left, always visible on mobile */}
+      <button
+        onClick={() => onDelete(client)}
+        className="absolute top-3 left-3 p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all z-10"
+        aria-label="Delete client"
+      >
+        <Trash2 size={16} />
+      </button>
+      
+      {/* Click area for editing - starts after delete button space */}
+      <div onClick={() => onEdit(client)} className="pt-8 cursor-pointer">
+        <h3 className="font-semibold text-zinc-900 dark:text-white text-lg mb-2">
+          {client.name}
+        </h3>
+        <div className="space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
           <a
-            href={`mailto:${client.email}`}
+            href={`tel:${client.phone}`}
+            onClick={(e) => e.stopPropagation()}
             className="flex items-center gap-2 hover:text-blue-600 transition-colors"
           >
-            <Mail size={16} />
-            <span>{client.email}</span>
+            <Phone size={16} />
+            <span>{client.phone}</span>
           </a>
-        )}
-        {client.address && (
-          <div className="flex items-start gap-2 text-zinc-500">
-            <MapPin size={16} className="shrink-0 mt-0.5" />
-            <span>{client.address}</span>
-          </div>
+          {client.email && (
+            <a
+              href={`mailto:${client.email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-2 hover:text-blue-600 transition-colors"
+            >
+              <Mail size={16} />
+              <span>{client.email}</span>
+            </a>
+          )}
+          {client.address && (
+            <div className="flex items-start gap-2 text-zinc-500">
+              <MapPin size={16} className="shrink-0 mt-0.5" />
+              <span>{client.address}</span>
+            </div>
+          )}
+        </div>
+        {client.notes && (
+          <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500 italic border-t border-zinc-100 dark:border-zinc-800 pt-2">
+            {client.notes}
+          </p>
         )}
       </div>
-      {client.notes && (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-500 italic border-t border-zinc-100 dark:border-zinc-800 pt-2">
-          {client.notes}
-        </p>
-      )}
     </div>
   );
 }
 
 // Client Row Component (for desktop table)
-function ClientRow({ client }: { client: Client }) {
+function ClientRow({ client, onEdit, onDelete }: { client: Client; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
     <tr className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white">
+      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600" onClick={() => onEdit(client)}>
         {client.name}
       </td>
       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
@@ -176,21 +190,21 @@ function ClientRow({ client }: { client: Client }) {
           <span className="text-zinc-400">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-        {client.notes ? (
-          <span className="max-w-xs truncate block" title={client.notes}>
-            {client.notes}
-          </span>
-        ) : (
-          <span className="text-zinc-400">—</span>
-        )}
+      <td className="px-4 py-3 text-right">
+        <button
+          onClick={() => onDelete(client)}
+          className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          aria-label="Delete client"
+        >
+          <Trash2 size={18} />
+        </button>
       </td>
     </tr>
   );
 }
 
 // Client Table Component (for desktop)
-function ClientTable({ clients }: { clients: Client[] }) {
+function ClientTable({ clients, onEdit, onDelete }: { clients: Client[]; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
     <div className="hidden md:block overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
       <table className="w-full">
@@ -208,11 +222,12 @@ function ClientTable({ clients }: { clients: Client[] }) {
             <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
               Address
             </th>
+            <th className="w-16"></th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-black divide-y divide-zinc-200 dark:divide-zinc-800">
           {clients.map((client) => (
-            <ClientRow key={client.id} client={client} />
+            <ClientRow key={client.id} client={client} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </tbody>
       </table>
@@ -221,11 +236,11 @@ function ClientTable({ clients }: { clients: Client[] }) {
 }
 
 // Client List Component (for mobile)
-function ClientList({ clients }: { clients: Client[] }) {
+function ClientList({ clients, onEdit, onDelete }: { clients: Client[]; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
     <div className="md:hidden space-y-3">
       {clients.map((client) => (
-        <ClientCard key={client.id} client={client} />
+        <ClientCard key={client.id} client={client} onEdit={onEdit} onDelete={onDelete} />
       ))}
     </div>
   );
@@ -236,17 +251,20 @@ function ClientModal({
   isOpen,
   onClose,
   onSuccess,
+  client,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (client: Client) => void;
+  client?: Client | null;
 }) {
+  const isEditMode = !!client;
   const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    address: "",
-    notes: "",
+    name: client?.name || "",
+    phone: client?.phone || "",
+    email: client?.email || "",
+    address: client?.address || "",
+    notes: client?.notes || "",
   });
   const [errors, setErrors] = useState<{ name?: string; phone?: string; email?: string; general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -254,10 +272,16 @@ function ClientModal({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFormData({ name: "", phone: "", email: "", address: "", notes: "" });
+      setFormData({
+        name: client?.name || "",
+        phone: client?.phone || "",
+        email: client?.email || "",
+        address: client?.address || "",
+        notes: client?.notes || "",
+      });
       setErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, client]);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -319,15 +343,15 @@ function ClientModal({
     setErrors({});
 
     try {
-      const response = await fetch("/api/clients", {
-        method: "POST",
+      const response = await fetch("/api/clients" + (isEditMode ? `/${client.id}` : ""), {
+        method: isEditMode ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to create client");
+        throw new Error(data.error || (isEditMode ? "Failed to update client" : "Failed to create client"));
       }
 
       onSuccess(data.client);
@@ -369,7 +393,7 @@ function ClientModal({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
-              Add New Client
+              {isEditMode ? "Edit Client" : "Add New Client"}
             </h2>
             <button
               onClick={onClose}
@@ -439,7 +463,7 @@ function ClientModal({
                     ? "border-red-500 dark:border-red-500"
                     : "border-zinc-300 dark:border-zinc-700"
                 }`}
-                placeholder="(555) 123-4567"
+                placeholder="07700 900123"
                 autoComplete="tel"
               />
               {errors.phone && (
@@ -495,7 +519,7 @@ function ClientModal({
                 value={formData.address}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                placeholder="123 Main St, City, State"
+                placeholder="123 High Street, London"
                 autoComplete="street-address"
               />
             </div>
@@ -537,10 +561,10 @@ function ClientModal({
                 {isSubmitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Creating...
+                    {isEditMode ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  "Create Client"
+                  isEditMode ? "Update Client" : "Create Client"
                 )}
               </button>
             </div>
@@ -559,7 +583,7 @@ function ClientModal({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
-              Add New Client
+              {isEditMode ? "Edit Client" : "Add New Client"}
             </h2>
             <button
               onClick={onClose}
@@ -629,7 +653,7 @@ function ClientModal({
                     ? "border-red-500 dark:border-red-500"
                     : "border-zinc-300 dark:border-zinc-700"
                 }`}
-                placeholder="(555) 123-4567"
+                placeholder="07700 900123"
                 autoComplete="tel"
               />
               {errors.phone && (
@@ -685,7 +709,7 @@ function ClientModal({
                 value={formData.address}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                placeholder="123 Main St, City, State"
+                placeholder="123 High Street, London"
                 autoComplete="street-address"
               />
             </div>
@@ -727,10 +751,10 @@ function ClientModal({
                 {isSubmitting ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Creating...
+                    {isEditMode ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  "Create Client"
+                  isEditMode ? "Update Client" : "Create Client"
                 )}
               </button>
             </div>
@@ -801,6 +825,8 @@ export default function ClientsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Fetch clients from Supabase
@@ -836,12 +862,55 @@ export default function ClientsPage() {
     client.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle successful client creation
-  const handleClientCreated = (newClient: Client) => {
-    setClients((prev) =>
-      [newClient, ...prev].sort((a, b) => a.name.localeCompare(b.name))
-    );
-    setSuccessMessage(`${newClient.name} added successfully`);
+  // Handle successful client create/update
+  const handleClientSuccess = (client: Client, isNew: boolean) => {
+    if (isNew) {
+      setClients((prev) =>
+        [client, ...prev].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setSuccessMessage(`${client.name} added successfully`);
+    } else {
+      setClients((prev) =>
+        prev.map((c) => (c.id === client.id ? client : c)).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setSuccessMessage(`${client.name} updated successfully`);
+    }
+    setIsModalOpen(false);
+    setEditingClient(null);
+  };
+
+  // Handle delete confirmation
+  const handleDelete = async () => {
+    if (!deletingClient) return;
+
+    try {
+      const response = await fetch(`/api/clients/${deletingClient.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete client");
+      }
+
+      setClients((prev) => prev.filter((c) => c.id !== deletingClient.id));
+      setSuccessMessage(`${deletingClient.name} deleted`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete client");
+    } finally {
+      setDeletingClient(null);
+    }
+  };
+
+  // Open edit modal
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+    setIsModalOpen(true);
+  };
+
+  // Open add modal
+  const handleAddClient = () => {
+    setEditingClient(null);
+    setIsModalOpen(true);
   };
 
   // Render content based on loading/error state
@@ -865,8 +934,8 @@ export default function ClientsPage() {
 
     return (
       <>
-        <ClientList clients={filteredClients} />
-        <ClientTable clients={filteredClients} />
+        <ClientList clients={filteredClients} onEdit={handleEdit} onDelete={setDeletingClient} />
+        <ClientTable clients={filteredClients} onEdit={handleEdit} onDelete={setDeletingClient} />
       </>
     );
   };
@@ -880,7 +949,7 @@ export default function ClientsPage() {
             Clients
           </h1>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleAddClient}
             className="bg-blue-600 text-white rounded-md px-4 py-2 font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
           >
             <UserPlus size={20} />
@@ -906,12 +975,54 @@ export default function ClientsPage() {
         {renderContent()}
       </div>
 
-      {/* Add Client Modal */}
+      {/* Add/Edit Client Modal */}
       <ClientModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleClientCreated}
+        onClose={() => { setIsModalOpen(false); setEditingClient(null); }}
+        onSuccess={(client) => handleClientSuccess(client, !editingClient)}
+        client={editingClient}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deletingClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setDeletingClient(null)}
+            aria-hidden="true"
+          />
+
+          {/* Modal */}
+          <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-sm mx-auto p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="bg-red-100 dark:bg-red-900/20 rounded-full p-4 mb-4">
+                <Trash2 className="text-red-600 dark:text-red-400" size={32} />
+              </div>
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white mb-2">
+                Delete Client?
+              </h2>
+              <p className="text-zinc-600 dark:text-zinc-400 mb-6">
+                Are you sure you want to delete <strong>{deletingClient.name}</strong>? This cannot be undone.
+              </p>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setDeletingClient(null)}
+                  className="flex-1 px-4 py-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Toast */}
       {successMessage && (
