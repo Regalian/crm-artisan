@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export const proxy = (async (request: NextRequest): Promise<NextResponse> => {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -33,10 +33,12 @@ export async function proxy(request: NextRequest) {
   await supabase.auth.getUser()
 
   return supabaseResponse
-}
+}) as (request: NextRequest) => Promise<NextResponse>
 
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
+
+export default proxy
