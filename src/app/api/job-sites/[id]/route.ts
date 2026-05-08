@@ -101,7 +101,10 @@ export async function PUT(
         notes: notes?.trim() || null,
       })
       .eq("id", id)
-      .select()
+      .select(`
+        *,
+        client:clients(id, name)
+      `)
       .single();
 
     if (error) {

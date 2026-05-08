@@ -99,7 +99,10 @@ export async function POST(request: NextRequest) {
         status: status || "planned",
         notes: notes?.trim() || null,
       })
-      .select()
+      .select(`
+        *,
+        client:clients(id, name)
+      `)
       .single();
 
     if (insertError) {
