@@ -98,6 +98,19 @@ export async function DELETE(
     let userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Check if client has any job sites - block deletion if so
+    const { count: jobSitesCount } = await supabase
+      .from("job_sites")
+      .select("*", { count: "exact", head: true })
+      .eq("client_id", id);
+
+    if (jobSitesCount && jobSitesCount > 0) {
+      return NextResponse.json(
+        { error: `Cannot delete client with ${jobSitesCount} job site${jobSitesCount !== 1 ? 's' : ''}. Delete job sites first.` },
+        { status: 409 }
+      );
+    }
+
     const { error } = await supabase
       .from("clients")
       .delete()
