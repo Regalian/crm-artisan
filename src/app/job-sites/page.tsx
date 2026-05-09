@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, FileText } from "lucide-react";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -125,7 +126,7 @@ function NoResultsState({ searchTerm }: { searchTerm: string }) {
 }
 
 // Job Site Card Component (for mobile)
-function JobSiteCard({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void }) {
+function JobSiteCard({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: JobSite; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void; onCreateQuote: (id: string) => void }) {
   return (
     <div className="bg-white dark:bg-black border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 mb-3 relative">
       {/* Delete button - top right, always visible on mobile */}
@@ -158,6 +159,13 @@ function JobSiteCard({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: 
             <span>{formatDate(jobSite.start_date)}{jobSite.end_date ? ` → ${formatDate(jobSite.end_date)}` : ""}</span>
           </div>
         </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onCreateQuote(jobSite.id); }}
+          className="mt-3 flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+        >
+          <FileText size={14} />
+          View Quotes
+        </button>
         {jobSite.notes && (
           <p className="mt-3 text-xs text-zinc-500 italic border-t border-zinc-100 dark:border-zinc-800 pt-2">
             {jobSite.notes}
@@ -169,7 +177,7 @@ function JobSiteCard({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: 
 }
 
 // Job Site Row Component (for desktop table)
-function JobSiteRow({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void }) {
+function JobSiteRow({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: JobSite; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void; onCreateQuote: (id: string) => void }) {
   return (
     <tr className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
       <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600" onClick={() => onEdit(jobSite)}>
@@ -192,6 +200,15 @@ function JobSiteRow({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: (
       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
         {formatDate(jobSite.start_date)}
       </td>
+      <td className="px-4 py-3">
+        <button
+          onClick={() => onCreateQuote(jobSite.id)}
+          className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          aria-label="View quotes"
+        >
+          <FileText size={18} />
+        </button>
+      </td>
       <td className="px-4 py-3 text-right">
         <button
           onClick={() => onDelete(jobSite)}
@@ -206,7 +223,7 @@ function JobSiteRow({ jobSite, onEdit, onDelete }: { jobSite: JobSite; onEdit: (
 }
 
 // Job Site Table Component (for desktop)
-function JobSiteTable({ jobSites, onEdit, onDelete }: { jobSites: JobSite[]; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void }) {
+function JobSiteTable({ jobSites, onEdit, onDelete, onCreateQuote }: { jobSites: JobSite[]; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void; onCreateQuote: (id: string) => void }) {
   return (
     <div className="hidden md:block overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
       <table className="w-full">
@@ -228,11 +245,12 @@ function JobSiteTable({ jobSites, onEdit, onDelete }: { jobSites: JobSite[]; onE
               Start Date
             </th>
             <th className="w-16"></th>
+            <th className="w-16"></th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-black divide-y divide-zinc-200 dark:divide-zinc-800">
           {jobSites.map((jobSite) => (
-            <JobSiteRow key={jobSite.id} jobSite={jobSite} onEdit={onEdit} onDelete={onDelete} />
+            <JobSiteRow key={jobSite.id} jobSite={jobSite} onEdit={onEdit} onDelete={onDelete} onCreateQuote={onCreateQuote} />
           ))}
         </tbody>
       </table>
@@ -241,11 +259,11 @@ function JobSiteTable({ jobSites, onEdit, onDelete }: { jobSites: JobSite[]; onE
 }
 
 // Job Site List Component (for mobile)
-function JobSiteList({ jobSites, onEdit, onDelete }: { jobSites: JobSite[]; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void }) {
+function JobSiteList({ jobSites, onEdit, onDelete, onCreateQuote }: { jobSites: JobSite[]; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void; onCreateQuote: (id: string) => void }) {
   return (
     <div className="md:hidden space-y-3">
       {jobSites.map((jobSite) => (
-        <JobSiteCard key={jobSite.id} jobSite={jobSite} onEdit={onEdit} onDelete={onDelete} />
+        <JobSiteCard key={jobSite.id} jobSite={jobSite} onEdit={onEdit} onDelete={onDelete} onCreateQuote={onCreateQuote} />
       ))}
     </div>
   );
@@ -782,6 +800,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 // Main Job Sites Page Component
 export default function JobSitesPage() {
+  const router = useRouter();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -908,8 +927,8 @@ export default function JobSitesPage() {
 
     return (
       <>
-        <JobSiteList jobSites={filteredJobSites} onEdit={handleEdit} onDelete={setDeletingJobSite} />
-        <JobSiteTable jobSites={filteredJobSites} onEdit={handleEdit} onDelete={setDeletingJobSite} />
+        <JobSiteList jobSites={filteredJobSites} onEdit={handleEdit} onDelete={setDeletingJobSite} onCreateQuote={(id) => router.push(`/job-sites/${id}/quotes/new`)} />
+        <JobSiteTable jobSites={filteredJobSites} onEdit={handleEdit} onDelete={setDeletingJobSite} onCreateQuote={(id) => router.push(`/job-sites/${id}/quotes/new`)} />
       </>
     );
   };
