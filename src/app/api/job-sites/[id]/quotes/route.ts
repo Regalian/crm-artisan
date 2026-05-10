@@ -81,7 +81,12 @@ export async function POST(
       p_job_site_id: id
     });
 
-    const quoteNumber = quoteNumberData || `Q-${Date.now().toString().slice(-3)}`;
+    // Normalize to Q-NNN format (RPC may return PL- or other prefixes)
+    let quoteNumber = `Q-${Date.now().toString().slice(-3)}`;
+    if (quoteNumberData) {
+      const num = quoteNumberData.replace(/^[^-]+-/, '');
+      quoteNumber = `Q-${num}`;
+    }
 
     const { data: quote, error: insertError } = await supabase
       .from("quotes")
