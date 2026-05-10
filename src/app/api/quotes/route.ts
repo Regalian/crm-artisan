@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         line_items:quote_line_items(*),
-        job_site:job_sites(id, title, client:clients(id, name))
+        job_site:job_sites(id, title, client:clients(id, name, user_id))
       `)
       .order("created_at", { ascending: false });
 
@@ -41,10 +41,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch quotes" }, { status: 500 });
     }
 
-    // Filter to user-owned quotes
+    // Filter to user-owned quotes (client is returned as an object from .single() joins)
     const userQuotes = quotes.filter((q) => {
-      const jobSite = Array.isArray(q.job_site) ? q.job_site[0] : q.job_site;
-      const client = Array.isArray(jobSite?.client) ? jobSite?.client[0] : jobSite?.client;
+      const jobSite = q.job_site;
+      const client = jobSite?.client;
       return client?.user_id === userId;
     });
 
