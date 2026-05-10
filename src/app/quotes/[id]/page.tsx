@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  AlertCircle, Loader2, X, CheckCircle, ArrowLeft, Plus, Trash2, Send, RotateCcw, ThumbsUp, ThumbsDown
+  AlertCircle, Loader2, X, CheckCircle, ArrowLeft, Plus, Trash2, Send, RotateCcw, ThumbsUp, ThumbsDown, FileDown
 } from "lucide-react";
 import { calculateQuoteTotal, formatCurrency } from "@/lib/quotes";
 
@@ -544,6 +544,17 @@ export default function QuoteDetailPage() {
               </button>
             </>
           )}
+        </div>
+
+        {/* Download PDF - available for all quotes */}
+        <div>
+          <a
+            href={`/api/quotes/${quoteId}/pdf`}
+            className="inline-flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+          >
+            <FileDown size={16} />
+            Download PDF
+          </a>
         </div>
       </div>
 
