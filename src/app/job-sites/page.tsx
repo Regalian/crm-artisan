@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, FileText } from "lucide-react";
+import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, FileText, Receipt, ClipboardList } from "lucide-react";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -163,8 +163,8 @@ function JobSiteCard({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: Jo
           onClick={(e) => { e.stopPropagation(); onCreateQuote(jobSite.id); }}
           className="mt-3 flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
         >
-          <FileText size={14} />
-          View Quotes
+          <ClipboardList size={14} />
+          New Quote
         </button>
         {jobSite.notes && (
           <p className="mt-3 text-xs text-zinc-500 italic border-t border-zinc-100 dark:border-zinc-800 pt-2">
@@ -201,22 +201,32 @@ function JobSiteRow({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: Job
         {formatDate(jobSite.start_date)}
       </td>
       <td className="px-4 py-3">
-        <button
-          onClick={() => onCreateQuote(jobSite.id)}
-          className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          aria-label="View quotes"
-        >
-          <FileText size={18} />
-        </button>
+        <div className="relative group">
+          <button
+            onClick={() => onCreateQuote(jobSite.id)}
+            className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            aria-label="Create quote"
+          >
+            <ClipboardList size={18} />
+          </button>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-zinc-900 dark:bg-zinc-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity duration-150">
+            Create Quote
+          </div>
+        </div>
       </td>
       <td className="px-4 py-3 text-right">
-        <button
-          onClick={() => onDelete(jobSite)}
-          className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          aria-label="Delete job site"
-        >
-          <Trash2 size={18} />
-        </button>
+        <div className="relative group flex justify-end">
+          <button
+            onClick={() => onDelete(jobSite)}
+            className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            aria-label="Delete job site"
+          >
+            <Trash2 size={18} />
+          </button>
+          <div className="absolute bottom-full right-0 mb-1.5 px-2 py-1 bg-zinc-900 dark:bg-zinc-700 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity duration-150">
+            Delete Job Site
+          </div>
+        </div>
       </td>
     </tr>
   );
