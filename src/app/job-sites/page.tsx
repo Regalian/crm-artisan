@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, FileText, Receipt, ClipboardList } from "lucide-react";
+import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, ClipboardList } from "lucide-react";
+import { ErrorToast } from "@/app/components/Toast";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -85,10 +86,8 @@ function LoadingState() {
 
 // Error State Component
 function ErrorState({
-  message,
   onRetry,
 }: {
-  message: string;
   onRetry: () => void;
 }) {
   return (
@@ -96,9 +95,9 @@ function ErrorState({
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md text-center">
         <AlertCircle className="text-red-600 mx-auto mb-3" size={40} />
         <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-          Something went wrong
+          Could not load job sites
         </h3>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-4">{message}</p>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-4">Something went wrong. Please try again.</p>
         <button
           onClick={onRetry}
           className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors"
@@ -813,7 +812,7 @@ export default function JobSitesPage() {
   const router = useRouter();
   const [jobSites, setJobSites] = useState<JobSite[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -824,22 +823,20 @@ export default function JobSitesPage() {
   // Fetch job sites from API
   const fetchJobSites = useCallback(async () => {
     setLoadingState("loading");
-    setError(null);
+    setServerError(null);
 
     try {
       const response = await fetch("/api/job-sites");
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch job sites: ${response.statusText}`);
+        throw new Error("Failed to fetch job sites");
       }
 
       const data = await response.json();
       setJobSites(data.job_sites || []);
       setLoadingState("success");
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
+    } catch {
+      setServerError("Could not load job sites. Please check your connection and try again.");
       setLoadingState("error");
     }
   }, []);
@@ -898,7 +895,7 @@ export default function JobSitesPage() {
       setJobSites((prev) => prev.filter((js) => js.id !== deletingJobSite.id));
       setSuccessMessage(`${deletingJobSite.title} deleted`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete job site");
+      setServerError(err instanceof Error ? err.message : "Failed to delete job site");
     } finally {
       setDeletingJobSite(null);
     }
@@ -923,7 +920,7 @@ export default function JobSitesPage() {
     }
 
     if (loadingState === "error") {
-      return <ErrorState message={error || "Unknown error"} onRetry={fetchJobSites} />;
+      return <ErrorState onRetry={fetchJobSites} />;
     }
 
     // Success state
@@ -1048,6 +1045,14 @@ export default function JobSitesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Error Toast */}
+      {serverError && (
+        <ErrorToast
+          message={serverError}
+          onClose={() => setServerError(null)}
+        />
       )}
 
       {/* Success Toast */}

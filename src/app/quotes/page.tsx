@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2 } from "lucide-react";
+import { ErrorToast } from "@/app/components/Toast";
 import { calculateQuoteTotal, formatCurrency } from "@/lib/quotes";
 
 // Types
@@ -92,13 +93,13 @@ function LoadingState() {
 }
 
 // Error State
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md text-center">
         <AlertCircle className="text-red-600 mx-auto mb-3" size={40} />
-        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Something went wrong</h3>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-4">{message}</p>
+        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Could not load quotes</h3>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-4">Something went wrong. Please try again.</p>
         <button onClick={onRetry} className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors">
           Try Again
         </button>
@@ -222,7 +223,7 @@ export default function QuotesPage() {
   const router = useRouter();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deletingQuote, setDeletingQuote] = useState<Quote | null>(null);
@@ -231,16 +232,15 @@ export default function QuotesPage() {
   // Fetch quotes
   const fetchQuotes = useCallback(async () => {
     setLoadingState("loading");
-    setError(null);
+    setServerError(null);
     try {
       const response = await fetch("/api/quotes");
-      if (!response.ok) throw new Error(`Failed to fetch quotes: ${response.statusText}`);
+      if (!response.ok) throw new Error("Failed to fetch quotes");
       const data = await response.json();
       setQuotes(data.quotes || []);
       setLoadingState("success");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
+      setServerError("Could not load quotes. Please check your connection and try again.");
       setLoadingState("error");
     }
   }, []);
@@ -269,7 +269,7 @@ export default function QuotesPage() {
       setQuotes((prev) => prev.filter((q) => q.id !== deletingQuote.id));
       setSuccessMessage(`${deletingQuote.quote_number} deleted`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete quote");
+      setServerError(err instanceof Error ? err.message : "Failed to delete quote");
     } finally {
       setDeletingQuote(null);
     }
@@ -278,7 +278,7 @@ export default function QuotesPage() {
   // Render content
   const renderContent = () => {
     if (loadingState === "loading" || loadingState === "idle") return <LoadingState />;
-    if (loadingState === "error") return <ErrorState message={error || "Unknown error"} onRetry={fetchQuotes} />;
+    if (loadingState === "error") return <ErrorState onRetry={fetchQuotes} />;
     if (quotes.length === 0) return <EmptyState onCreate={() => {}} />;
     if (filteredQuotes.length === 0 && (searchQuery || statusFilter !== "all"))
       return <NoResultsState searchTerm={searchQuery} />;
@@ -404,6 +404,9 @@ export default function QuotesPage() {
           </div>
         </div>
       )}
+
+      {/* Error Toast */}
+      {serverError && <ErrorToast message={serverError} onClose={() => setServerError(null)} />}
 
       {/* Success Toast */}
       {successMessage && (

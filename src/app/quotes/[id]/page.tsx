@@ -6,6 +6,7 @@ import {
   AlertCircle, Loader2, X, CheckCircle, ArrowLeft, Plus, Trash2, Send, RotateCcw, ThumbsUp, ThumbsDown, FileDown
 } from "lucide-react";
 import { calculateQuoteTotal, formatCurrency } from "@/lib/quotes";
+import { ErrorToast } from "@/app/components/Toast";
 
 // Types
 interface LineItem {
@@ -85,26 +86,17 @@ function LoadingState() {
 
 // Error State
 function ErrorState({
-  message,
   onRetry,
 }: {
-  message: string;
   onRetry: () => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md text-center">
         <AlertCircle className="text-red-600 mx-auto mb-3" size={40} />
-        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-          Something went wrong
-        </h3>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-4">{message}</p>
-        <button
-          onClick={onRetry}
-          className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors"
-        >
-          Try Again
-        </button>
+        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Could not load quote</h3>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-4">Something went wrong. Please try again.</p>
+        <button onClick={onRetry} className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors">Try Again</button>
       </div>
     </div>
   );
@@ -248,7 +240,7 @@ export default function QuoteDetailPage() {
 
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   // Edit state for draft quotes
   const [isEditing, setIsEditing] = useState(false);
@@ -269,10 +261,10 @@ export default function QuoteDetailPage() {
   // Fetch quote
   const fetchQuote = useCallback(async () => {
     setLoadingState("loading");
-    setError(null);
+    setServerError(null);
     try {
       const response = await fetch(`/api/quotes/${quoteId}`);
-      if (!response.ok) throw new Error(`Failed to fetch quote: ${response.statusText}`);
+      if (!response.ok) throw new Error("Failed to fetch quote");
       const data = await response.json();
       setQuote(data.quote);
       setEditNotes(data.quote.notes || "");
@@ -280,8 +272,7 @@ export default function QuoteDetailPage() {
       setSavedItemIndices(new Set((data.quote.line_items || []).map((_: unknown, i: number) => i)));
       setLoadingState("success");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
+      setServerError("Could not load quote. Please check your connection and try again.");
       setLoadingState("error");
     }
   }, [quoteId]);
@@ -379,7 +370,7 @@ export default function QuoteDetailPage() {
       setSuccessMessage("Quote sent");
       fetchQuote();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send quote");
+      setServerError(err instanceof Error ? err.message : "Failed to send quote");
     } finally {
       setActionLoading(false);
       setConfirmModal(null);
@@ -398,7 +389,7 @@ export default function QuoteDetailPage() {
       setSuccessMessage("Quote reverted to draft");
       fetchQuote();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revert quote");
+      setServerError(err instanceof Error ? err.message : "Failed to revert quote");
     } finally {
       setActionLoading(false);
       setConfirmModal(null);
@@ -417,7 +408,7 @@ export default function QuoteDetailPage() {
       setSuccessMessage("Quote marked as accepted");
       fetchQuote();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update quote");
+      setServerError(err instanceof Error ? err.message : "Failed to update quote");
     } finally {
       setActionLoading(false);
       setConfirmModal(null);
@@ -436,7 +427,7 @@ export default function QuoteDetailPage() {
       setSuccessMessage("Quote marked as rejected");
       fetchQuote();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update quote");
+      setServerError(err instanceof Error ? err.message : "Failed to update quote");
     } finally {
       setActionLoading(false);
       setConfirmModal(null);
@@ -446,8 +437,8 @@ export default function QuoteDetailPage() {
   // --- Render ---
 
   if (loadingState === "loading" || loadingState === "idle") return <LoadingState />;
-  if (loadingState === "error") return <ErrorState message={error || "Unknown error"} onRetry={fetchQuote} />;
-  if (!quote) return <ErrorState message="Quote not found" onRetry={fetchQuote} />;
+  if (loadingState === "error") return <ErrorState onRetry={fetchQuote} />;
+  if (!quote) return <ErrorState onRetry={fetchQuote} />;
 
   const displayItems = isEditing ? editItems : quote.line_items;
   const displayTotal = isEditing ? total : quoteTotal;
@@ -731,6 +722,9 @@ export default function QuoteDetailPage() {
           onCancel={() => setConfirmModal(null)}
         />
       )}
+
+      {/* Error Toast */}
+      {serverError && <ErrorToast message={serverError} onClose={() => setServerError(null)} />}
 
       {/* Success Toast */}
       {successMessage && (

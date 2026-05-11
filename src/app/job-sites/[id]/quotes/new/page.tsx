@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   AlertCircle, Loader2, X, CheckCircle, ArrowLeft, Plus, Trash2
 } from "lucide-react";
+import { ErrorToast } from "@/app/components/Toast";
 import { calculateQuoteTotal, formatCurrency } from "@/lib/quotes";
 
 // Types
@@ -37,26 +38,17 @@ function LoadingState() {
 
 // Error State Component
 function ErrorState({
-  message,
   onRetry,
 }: {
-  message: string;
   onRetry: () => void;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md text-center">
         <AlertCircle className="text-red-600 mx-auto mb-3" size={40} />
-        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
-          Something went wrong
-        </h3>
-        <p className="text-red-600 dark:text-red-400 text-sm mb-4">{message}</p>
-        <button
-          onClick={onRetry}
-          className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors"
-        >
-          Try Again
-        </button>
+        <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Could not load job site</h3>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-4">Something went wrong. Please try again.</p>
+        <button onClick={onRetry} className="bg-red-600 text-white rounded-md px-4 py-2 font-medium hover:bg-red-700 transition-colors">Try Again</button>
       </div>
     </div>
   );
@@ -160,31 +152,30 @@ export default function CreateQuotePage() {
 
   const [jobSite, setJobSite] = useState<JobSite | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [notes, setNotes] = useState("");
   const [quoteId, setQuoteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [savingItems, setSavingItems] = useState<Set<number>>(new Set());
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ general?: string }>({});
+  const [errors, setServerErrors] = useState<{ general?: string }>({});
 
   // Fetch job site details
   const fetchJobSite = useCallback(async () => {
     setLoadingState("loading");
-    setError(null);
+    setServerError(null);
 
     try {
       const response = await fetch(`/api/job-sites/${jobSiteId}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch job site: ${response.statusText}`);
+        throw new Error("Failed to fetch job site");
       }
       const data = await response.json();
       setJobSite(data.job_site);
       setLoadingState("success");
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
+      setServerError("Could not load job site. Please check your connection and try again.");
       setLoadingState("error");
     }
   }, [jobSiteId]);
@@ -265,7 +256,7 @@ export default function CreateQuotePage() {
         currentQuoteId = data.quote.id;
         setQuoteId(currentQuoteId);
       } catch {
-        setErrors({ general: "Failed to create quote. Please try again." });
+        setServerErrors({ general: "Failed to create quote. Please try again." });
         return false;
       }
     }
@@ -294,7 +285,7 @@ export default function CreateQuotePage() {
       setSavingItems((prev) => new Set([...prev, index]));
       return true;
     } catch {
-      setErrors({ general: "Failed to save line item. Please try again." });
+      setServerErrors({ general: "Failed to save line item. Please try again." });
       return false;
     }
   };
@@ -313,7 +304,7 @@ export default function CreateQuotePage() {
   // Save draft (save all items, then update notes)
   const handleSaveDraft = async () => {
     setIsSaving(true);
-    setErrors({});
+    setServerErrors({});
 
     const itemsOk = await saveAllItems();
     if (!itemsOk) {
@@ -347,7 +338,7 @@ export default function CreateQuotePage() {
   }
 
   if (loadingState === "error") {
-    return <ErrorState message={error || "Unknown error"} onRetry={fetchJobSite} />;
+    return <ErrorState onRetry={fetchJobSite} />;
   }
 
   return (
@@ -469,6 +460,9 @@ export default function CreateQuotePage() {
           </div>
         )}
       </div>
+
+      {/* Error Toast */}
+      {serverError && <ErrorToast message={serverError} onClose={() => setServerError(null)} />}
 
       {/* Success Toast */}
       {successMessage && (
