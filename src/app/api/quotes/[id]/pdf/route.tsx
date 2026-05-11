@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { pdf } from "@react-pdf/renderer";
@@ -84,18 +86,11 @@ export async function GET(
 
     // Generate PDF
     const pdfDoc = pdf(<QuotePdfDocument quote={normalizedQuote} total={total} />);
-    const stream = await pdfDoc.toBuffer();
+    const blob = await pdfDoc.toBlob();
 
-    // Convert ReadableStream to Buffer
-    const chunks: Uint8Array[] = [];
-    const reader = (stream as unknown as ReadableStream<Uint8Array>).getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-    }
-    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
-    const buffer = Buffer.concat(chunks as Buffer[], totalLength);
+    // Convert Blob to Buffer
+    const arrayBuffer = await blob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     return new NextResponse(buffer, {
       headers: {
