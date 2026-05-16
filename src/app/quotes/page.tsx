@@ -188,25 +188,25 @@ function QuoteRow({
   const total = calculateQuoteTotal(quote.line_items);
   return (
     <tr className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-      <td className="px-4 py-3 font-semibold text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600" onClick={onClick}>
+      <td className="px-3 py-2 font-semibold text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600 whitespace-nowrap" onClick={onClick}>
         {quote.quote_number}
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 cursor-pointer hover:text-blue-600" onClick={onClick}>
+      <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400 cursor-pointer hover:text-blue-600" onClick={onClick}>
         {quote.job_site?.client.name}
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 cursor-pointer hover:text-blue-600" onClick={onClick}>
+      <td className="px-3 py-2 text-zinc-600 dark:text-zinc-400 cursor-pointer hover:text-blue-600" onClick={onClick}>
         {quote.job_site?.title}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-2 py-2">
         <StatusBadge status={quote.status} />
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+      <td className="px-2 py-2 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
         {formatDate(quote.date)}
       </td>
-      <td className="px-4 py-3 text-zinc-900 dark:text-white font-medium text-right">
+      <td className="px-2 py-2 text-zinc-900 dark:text-white font-medium text-right whitespace-nowrap">
         {formatCurrency(total)}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-1 py-2 text-right">
         <button
           onClick={onDelete}
           className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -295,17 +295,17 @@ export default function QuotesPage() {
             />
           ))}
         </div>
-        <div className="hidden md:block overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="hidden md:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full">
             <thead className="bg-zinc-100 dark:bg-zinc-800">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">Quote #</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">Client</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">Job Site</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">Date</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">Total</th>
-                <th className="w-16"></th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-zinc-900 dark:text-white whitespace-nowrap">Quote #</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-zinc-900 dark:text-white">Client</th>
+                <th className="px-3 py-2 text-left text-sm font-semibold text-zinc-900 dark:text-white">Job Site</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-zinc-900 dark:text-white">Status</th>
+                <th className="px-2 py-2 text-left text-sm font-semibold text-zinc-900 dark:text-white">Date</th>
+                <th className="px-2 py-2 text-right text-sm font-semibold text-zinc-900 dark:text-white whitespace-nowrap">Total</th>
+                <th className="w-12"></th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-black divide-y divide-zinc-200 dark:divide-zinc-800">

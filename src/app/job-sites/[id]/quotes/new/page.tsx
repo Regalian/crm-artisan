@@ -95,7 +95,7 @@ function LineItemRow({
           type="number"
           min="0.01"
           step="1"
-          value={item.quantity || ""}
+          value={item.quantity ?? ""}
           onChange={(e) => onUpdate(index, "quantity", parseFloat(e.target.value) || 0)}
           className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
         />
@@ -110,7 +110,7 @@ function LineItemRow({
           type="number"
           min="0"
           step="0.01"
-          value={item.unit_price || ""}
+          value={item.unit_price ?? ""}
           onChange={(e) => onUpdate(index, "unit_price", parseFloat(e.target.value) || 0)}
           className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
         />
@@ -229,37 +229,13 @@ export default function CreateQuotePage() {
     setLineItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Save a single line item (and create the quote if needed)
-  const saveLineItem = async (index: number): Promise<boolean> => {
+  // Save a single line item (requires quoteId to already exist)
+  const saveLineItem = async (index: number, currentQuoteId: string): Promise<boolean> => {
     const item = lineItems[index];
 
     if (!item.description.trim()) return false;
     if (!item.quantity || item.quantity <= 0) return false;
     if (item.unit_price < 0) return false;
-
-    // Create the quote first if it doesn't exist yet
-    let currentQuoteId = quoteId;
-    if (!currentQuoteId) {
-      try {
-        const response = await fetch(`/api/job-sites/${jobSiteId}/quotes`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: "draft",
-            line_items: [],
-          }),
-        });
-        if (!response.ok) {
-          throw new Error("Failed to create quote");
-        }
-        const data = await response.json();
-        currentQuoteId = data.quote.id;
-        setQuoteId(currentQuoteId);
-      } catch {
-        setServerErrors({ general: "Failed to create quote. Please try again." });
-        return false;
-      }
-    }
 
     // Save the line item
     try {
@@ -291,14 +267,42 @@ export default function CreateQuotePage() {
   };
 
   // Save all unsaved line items
-  const saveAllItems = async (): Promise<boolean> => {
-    for (let i = 0; i < lineItems.length; i++) {
-      if (!savingItems.has(i)) {
-        const ok = await saveLineItem(i);
-        if (!ok) return false;
+  const saveAllItems = async (): Promise<string | null> => {
+    // Create the quote first if it doesn't exist yet
+    let currentQuoteId = quoteId;
+    if (!currentQuoteId) {
+      try {
+        const response = await fetch(`/api/job-sites/${jobSiteId}/quotes`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "draft",
+            line_items: [],
+          }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to create quote");
+        }
+        const data = await response.json();
+        currentQuoteId = data.quote.id;
+        setQuoteId(currentQuoteId);
+      } catch {
+        setServerErrors({ general: "Failed to create quote. Please try again." });
+        return null;
       }
     }
-    return true;
+
+    // currentQuoteId is guaranteed to be a string at this point
+    if (!currentQuoteId) return null;
+
+    // Now save all line items to the same quote
+    for (let i = 0; i < lineItems.length; i++) {
+      if (!savingItems.has(i)) {
+        const ok = await saveLineItem(i, currentQuoteId);
+        if (!ok) return null;
+      }
+    }
+    return currentQuoteId;
   };
 
   // Save draft (save all items, then update notes)
@@ -306,16 +310,16 @@ export default function CreateQuotePage() {
     setIsSaving(true);
     setServerErrors({});
 
-    const itemsOk = await saveAllItems();
-    if (!itemsOk) {
+    const savedQuoteId = await saveAllItems();
+    if (!savedQuoteId) {
       setIsSaving(false);
       return;
     }
 
     // Update the quote with notes if we have any
-    if (quoteId && notes.trim()) {
+    if (notes.trim()) {
       try {
-        await fetch(`/api/quotes/${quoteId}`, {
+        await fetch(`/api/quotes/${savedQuoteId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ notes: notes.trim() }),
@@ -327,9 +331,7 @@ export default function CreateQuotePage() {
 
     setSuccessMessage("Quote saved as draft");
     // Navigate to the quote detail page
-    if (quoteId) {
-      router.push(`/quotes/${quoteId}`);
-    }
+    router.push(`/quotes/${savedQuoteId}`);
   };
 
   // Render content based on state

@@ -196,10 +196,10 @@ function JobSiteRow({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: Job
       <td className="px-4 py-3">
         <StatusBadge status={jobSite.status} />
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+      <td className="px-2 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
         {formatDate(jobSite.start_date)}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-1 py-3">
         <div className="relative group">
           <button
             onClick={() => onCreateQuote(jobSite.id)}
@@ -213,7 +213,7 @@ function JobSiteRow({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: Job
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-1 py-3 text-right">
         <div className="relative group flex justify-end">
           <button
             onClick={() => onDelete(jobSite)}
@@ -234,7 +234,7 @@ function JobSiteRow({ jobSite, onEdit, onDelete, onCreateQuote }: { jobSite: Job
 // Job Site Table Component (for desktop)
 function JobSiteTable({ jobSites, onEdit, onDelete, onCreateQuote }: { jobSites: JobSite[]; onEdit: (jobSite: JobSite) => void; onDelete: (jobSite: JobSite) => void; onCreateQuote: (id: string) => void }) {
   return (
-    <div className="hidden md:block overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+    <div className="hidden md:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
       <table className="w-full">
         <thead className="bg-zinc-100 dark:bg-zinc-800">
           <tr>
@@ -253,8 +253,8 @@ function JobSiteTable({ jobSites, onEdit, onDelete, onCreateQuote }: { jobSites:
             <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
               Start Date
             </th>
-            <th className="w-16"></th>
-            <th className="w-16"></th>
+            <th className="w-12"></th>
+            <th className="w-12"></th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-black divide-y divide-zinc-200 dark:divide-zinc-800">

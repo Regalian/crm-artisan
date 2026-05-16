@@ -197,7 +197,7 @@ function LineItemRowEdit({
           type="number"
           min="0.01"
           step="1"
-          value={item.quantity || ""}
+          value={item.quantity ?? ""}
           onChange={(e) => onUpdate(index, "quantity", parseFloat(e.target.value) || 0)}
           className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
         />
@@ -208,7 +208,7 @@ function LineItemRowEdit({
           type="number"
           min="0"
           step="0.01"
-          value={item.unit_price || ""}
+          value={item.unit_price ?? ""}
           onChange={(e) => onUpdate(index, "unit_price", parseFloat(e.target.value) || 0)}
           className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-md text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
         />
