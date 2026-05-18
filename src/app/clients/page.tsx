@@ -152,10 +152,10 @@ function ClientCard({ client, onEdit, onDelete }: { client: Client; onEdit: (cli
 function ClientRow({ client, onEdit, onDelete }: { client: Client; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
     <tr className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600" onClick={() => onEdit(client)}>
+      <td className="px-4 py-3 font-medium text-zinc-900 dark:text-white cursor-pointer hover:text-blue-600 whitespace-nowrap" onClick={() => onEdit(client)}>
         {client.name}
       </td>
-      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
         <a
           href={`tel:${client.phone}`}
           className="flex items-center gap-2 hover:text-blue-600 transition-colors"
@@ -189,13 +189,13 @@ function ClientRow({ client, onEdit, onDelete }: { client: Client; onEdit: (clie
           <span className="text-zinc-400">—</span>
         )}
       </td>
-      <td className="px-4 py-3 text-right">
+      <td className="px-2 py-3 text-right">
         <button
           onClick={() => onDelete(client)}
-          className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
           aria-label="Delete client"
         >
-          <Trash2 size={18} />
+          <Trash2 size={16} />
         </button>
       </td>
     </tr>
@@ -205,23 +205,23 @@ function ClientRow({ client, onEdit, onDelete }: { client: Client; onEdit: (clie
 // Client Table Component (for desktop)
 function ClientTable({ clients, onEdit, onDelete }: { clients: Client[]; onEdit: (client: Client) => void; onDelete: (client: Client) => void }) {
   return (
-    <div className="hidden md:block overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full">
+    <div className="hidden md:block overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <table className="w-full min-w-[640px]">
         <thead className="bg-zinc-100 dark:bg-zinc-800">
           <tr>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white min-w-[140px]">
               Name
             </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white min-w-[160px]">
               Phone
             </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+            <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white min-w-[160px]">
               Email
             </th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
               Address
             </th>
-            <th className="w-16"></th>
+            <th className="w-10"></th>
           </tr>
         </thead>
         <tbody className="bg-white dark:bg-black divide-y divide-zinc-200 dark:divide-zinc-800">
