@@ -6,10 +6,7 @@ import { pdf } from "@react-pdf/renderer";
 import { QuotePdfDocument } from "@/app/components/QuotePdf";
 import { calculateQuoteTotal } from "@/lib/quotes";
 
-const DEV_USER_ID = process.env.DEV_USER_ID;
-
 async function getUserId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null | undefined> {
-  if (DEV_USER_ID) return DEV_USER_ID;
   const { data: { user } } = await supabase.auth.getUser();
   return user?.id;
 }

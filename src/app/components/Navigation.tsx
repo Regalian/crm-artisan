@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, MapPin, FileText, Settings, X } from "lucide-react";
+import { LayoutDashboard, Users, MapPin, FileText, LogOut, X } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { logout } from "@/app/actions/auth";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -12,8 +14,25 @@ const navItems = [
   { href: "/quotes", icon: FileText, label: "Quotes" },
 ];
 
+// User avatar / email section for sidebar
+function UserSection({ user }: { user: User | null }) {
+  const email = user?.email ?? "Unknown";
+  const initials = email.charAt(0).toUpperCase();
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 mb-2">
+      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-semibold shrink-0">
+        {initials}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-zinc-900 dark:text-white truncate">{email}</p>
+      </div>
+    </div>
+  );
+}
+
 // Desktop Sidebar
-export function DesktopSidebar() {
+export function DesktopSidebar({ user }: { user: User | null }) {
   const pathname = usePathname();
 
   return (
@@ -22,7 +41,7 @@ export function DesktopSidebar() {
         <h2 className="text-xl font-bold text-zinc-900 dark:text-white">CRM Artisan</h2>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-1">
         {navItems.map((item) => (
           <Link
             key={item.href}
@@ -39,18 +58,25 @@ export function DesktopSidebar() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-zinc-200 dark:border-zinc-800">
-        <button className="flex w-full items-center gap-3 px-3 py-2 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-md transition-colors font-medium">
-          <Settings size={20} />
-          <span>Settings</span>
-        </button>
+      {/* User info + logout */}
+      <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+        <UserSection user={user} />
+        <form action={logout}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-3 px-3 py-2 text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors font-medium"
+          >
+            <LogOut size={20} />
+            <span>Sign Out</span>
+          </button>
+        </form>
       </div>
     </aside>
   );
 }
 
 // Mobile Header with Drawer
-export function MobileNav() {
+export function MobileNav({ user }: { user: User | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
@@ -104,11 +130,19 @@ export function MobileNav() {
                 </Link>
               ))}
             </nav>
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-200 dark:border-zinc-800">
-              <button className="flex w-full items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-md transition-colors font-medium">
-                <Settings size={20} />
-                <span>Settings</span>
-              </button>
+            {/* User info + logout */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+              <UserSection user={user} />
+              <form action={logout}>
+                <button
+                  type="submit"
+                  onClick={() => setIsOpen(false)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors font-medium"
+                >
+                  <LogOut size={20} />
+                  <span>Sign Out</span>
+                </button>
+              </form>
             </div>
           </div>
         </div>

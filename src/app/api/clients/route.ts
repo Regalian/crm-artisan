@@ -1,20 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
-// Dev bypass - set DEV_USER_ID env var to bypass auth (remove in production)
-const DEV_USER_ID: string | undefined = process.env.DEV_USER_ID;
-
 export async function GET() {
   try {
     const supabase = await createClient();
-    
-    // Use dev user if set
-    let userId: string | null | undefined = DEV_USER_ID;
-    
-    if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -50,14 +41,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    
-    // Use dev user if set
-    let userId: string | null | undefined = DEV_USER_ID;
-    
-    if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      userId = user?.id;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json(
