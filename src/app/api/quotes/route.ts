@@ -9,18 +9,35 @@ async function getUserId(supabase: Awaited<ReturnType<typeof createClient>>): Pr
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const jobSiteId = searchParams.get("job_site_id");
 
-    // Fetch job_site IDs that belong to this user (defense in depth beyond RLS)
+    // Step 1: Get client IDs for this user
+    const { data: userClients, error: clientError } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("user_id", userId);
+
+    if (clientError) {
+      console.error("Database error:", clientError);
+      return NextResponse.json({ error: "Failed to fetch quotes" }, { status: 500 });
+    }
+
+    const userClientIds = (userClients || []).map((c) => c.id);
+
+    if (userClientIds.length === 0) {
+      return NextResponse.json({ quotes: [] }, { status: 200 });
+    }
+
+    // Step 2: Get job_site IDs for those clients
     const { data: userJobSites, error: jsError } = await supabase
       .from("job_sites")
       .select("id")
-      .eq("clients.user_id", userId);
+      .in("client_id", userClientIds);
 
     if (jsError) {
       console.error("Database error:", jsError);
@@ -33,12 +50,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ quotes: [] }, { status: 200 });
     }
 
+    // Step 3: Fetch quotes for those job sites
     let query = supabase
       .from("quotes")
       .select(`
         *,
         line_items:quote_line_items(*),
-        job_site:job_sites(id, title, client:clients(id, name, user_id))
+        job_site:job_sites(id, title, client:clients(id, name))
       `)
       .in("job_site_id", userJobSiteIds)
       .order("created_at", { ascending: false });
