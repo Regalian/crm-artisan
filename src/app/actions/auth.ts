@@ -76,6 +76,9 @@ export async function updatePassword(_prevState: unknown, formData: FormData) {
     return { error: error.message }
   }
 
+  // Revoke all sessions everywhere so a compromised session can't be reused
+  await supabase.auth.signOut({ scope: 'global' })
+
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/login?passwordUpdated=true')
 }

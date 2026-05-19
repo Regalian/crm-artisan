@@ -4,7 +4,7 @@ import LoginForm from './LoginForm'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ registered?: string }>
+  searchParams: Promise<{ registered?: string; passwordUpdated?: string }>
 }) {
   const resolved = await searchParams
 
@@ -17,8 +17,17 @@ export default async function LoginPage({
           <p className="mt-2 text-zinc-600 dark:text-zinc-400">Sign in to your account</p>
         </div>
 
+        {/* Password update success message */}
+        {resolved.passwordUpdated && (
+          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-center">
+            <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+              Password updated! Please sign in with your new password.
+            </p>
+          </div>
+        )}
+
         {/* Registration success message */}
-        {resolved.registered && (
+        {resolved.registered && !resolved.passwordUpdated && (
           <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-center">
             <p className="text-sm text-green-700 dark:text-green-300 font-medium">
               Account created! Please sign in below.
