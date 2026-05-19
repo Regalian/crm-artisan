@@ -73,9 +73,10 @@ export async function POST(
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    // Generate quote number using the database function
+    // Generate quote number using the database function (passing userId for ownership check)
     const { data: quoteNumberData } = await supabase.rpc('get_next_quote_number', {
-      p_job_site_id: id
+      p_job_site_id: id,
+      p_user_id: userId,
     });
 
     // Normalize to Q-NNN format (RPC may return PL- or other prefixes)
