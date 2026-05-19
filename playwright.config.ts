@@ -6,6 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
+  globalSetup: "./tests/global-setup.ts",
   reporter: "list",
   use: {
     baseURL: "http://localhost:3000",
@@ -13,8 +14,20 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      name: "chromium-auth",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "tests/auth.json",
+      },
+      testMatch: /clients\.spec\.ts|quotes\.spec\.ts/,
+    },
+    {
+      name: "chromium-no-auth",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: { cookies: [], origins: [] },
+      },
+      testMatch: /auth\.spec\.ts/,
     },
   ],
   webServer: {

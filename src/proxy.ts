@@ -30,6 +30,7 @@ export async function proxy(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/signup') ||
     request.nextUrl.pathname.startsWith('/forgot-password') ||
+    request.nextUrl.pathname.startsWith('/update-password') ||
     request.nextUrl.pathname.startsWith('/auth/callback')
 
   // No session + trying to access a protected page → redirect to login

@@ -13,8 +13,8 @@ export default async function LoginPage({
       <div className="w-full max-w-md">
         {/* Logo / Title */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">CRM Artisan</h1>
-          <p className="mt-2 text-zinc-600 dark:text-zinc-400">Sign in to your account</p>
+          <p className="text-3xl font-bold text-zinc-900 dark:text-white">CRM Artisan</p>
+          <h1 className="mt-2 text-xl font-semibold text-zinc-900 dark:text-white">Sign in to your account</h1>
         </div>
 
         {/* Password update success message */}
