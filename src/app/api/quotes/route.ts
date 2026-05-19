@@ -16,6 +16,23 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
     const jobSiteId = searchParams.get("job_site_id");
 
+    // Fetch job_site IDs that belong to this user (defense in depth beyond RLS)
+    const { data: userJobSites, error: jsError } = await supabase
+      .from("job_sites")
+      .select("id")
+      .eq("clients.user_id", userId);
+
+    if (jsError) {
+      console.error("Database error:", jsError);
+      return NextResponse.json({ error: "Failed to fetch quotes" }, { status: 500 });
+    }
+
+    const userJobSiteIds = (userJobSites || []).map((js) => js.id);
+
+    if (userJobSiteIds.length === 0) {
+      return NextResponse.json({ quotes: [] }, { status: 200 });
+    }
+
     let query = supabase
       .from("quotes")
       .select(`
@@ -23,14 +40,13 @@ export async function GET(request: NextRequest) {
         line_items:quote_line_items(*),
         job_site:job_sites(id, title, client:clients(id, name, user_id))
       `)
+      .in("job_site_id", userJobSiteIds)
       .order("created_at", { ascending: false });
 
     if (jobSiteId) {
       query = query.eq("job_site_id", jobSiteId);
     }
 
-    // Filter by user ownership via job_site -> client -> user_id
-    // We'll filter client-side since Supabase doesn't support nested eq in this pattern
     const { data: quotes, error } = await query;
 
     if (error) {
@@ -38,15 +54,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch quotes" }, { status: 500 });
     }
 
-    // Filter to user-owned quotes (client is returned as an object from .single() joins)
-    const userQuotes = quotes.filter((q) => {
-      const jobSite = q.job_site;
-      const client = jobSite?.client;
-      return client?.user_id === userId;
-    });
-
     // Filter by status if provided
-    const filtered = status ? userQuotes.filter((q) => q.status === status) : userQuotes;
+    const filtered = status ? (quotes || []).filter((q) => q.status === status) : (quotes || []);
 
     return NextResponse.json({ quotes: filtered }, { status: 200 });
   } catch (error) {
