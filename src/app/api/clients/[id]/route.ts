@@ -6,6 +6,20 @@ async function getUserId(supabase: Awaited<ReturnType<typeof createClient>>): Pr
   return user?.id;
 }
 
+async function verifyClientAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clientId: string,
+  userId: string | null | undefined
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("user_id", userId)
+    .single();
+  return !!data;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -58,6 +72,9 @@ export async function PUT(
       }
     }
 
+    const hasAccess = await verifyClientAccess(supabase, id, userId);
+    if (!hasAccess) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
     const { data: client, error } = await supabase
       .from("clients")
       .update({
@@ -95,7 +112,10 @@ export async function DELETE(
     let userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Check if client has any job sites - block deletion if so
+    const hasAccess = await verifyClientAccess(supabase, id, userId);
+    if (!hasAccess) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+    // Check if client has any job sites — block deletion if so
     const { count: jobSitesCount } = await supabase
       .from("job_sites")
       .select("*", { count: "exact", head: true })
