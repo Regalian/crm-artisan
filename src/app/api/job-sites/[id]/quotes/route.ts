@@ -73,10 +73,12 @@ export async function POST(
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
-    // Generate quote number using the database function (passing userId for ownership check)
+    // Generate quote number using the database function.
+    // The fixed function derives the caller's identity from auth.uid() in the
+    // database session — p_user_id has been removed to prevent callers from
+    // supplying an arbitrary user id (see SECURITY-AUDIT.MD, Finding 1).
     const { data: quoteNumberData } = await supabase.rpc('get_next_quote_number', {
       p_job_site_id: id,
-      p_user_id: userId,
     });
 
     // Normalize to Q-NNN format (RPC may return PL- or other prefixes)

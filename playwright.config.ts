@@ -29,6 +29,23 @@ export default defineConfig({
       },
       testMatch: /auth\.spec\.ts/,
     },
+    {
+      name: "chromium-security",
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: { cookies: [], origins: [] },
+      },
+      testMatch: /authorization\.spec\.ts/,
+    },
+    {
+      // API-only project: no browser launched, calls Supabase and the app
+      // REST layer directly.  Exercises the RPC security regression tests.
+      name: "api-security",
+      use: {
+        storageState: { cookies: [], origins: [] },
+      },
+      testMatch: /rpc-security\.spec\.ts/,
+    },
   ],
   webServer: {
     command: "npm run dev",
