@@ -39,12 +39,12 @@ export default defineConfig({
     },
     {
       // API-only project: no browser launched, calls Supabase and the app
-      // REST layer directly.  Exercises the RPC security regression tests.
+      // REST layer directly. Exercises the RPC and RLS security regression tests.
       name: "api-security",
       use: {
         storageState: { cookies: [], origins: [] },
       },
-      testMatch: /rpc-security\.spec\.ts/,
+      testMatch: /(?:rpc-security|rls-isolation)\.spec\.ts/,
     },
   ],
   webServer: {

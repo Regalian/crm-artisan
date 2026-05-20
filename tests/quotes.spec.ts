@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Quote Lifecycle", () => {
+  test.describe.configure({ mode: "serial" });
   const uniqueId = `pw-${Date.now()}`;
   const TEST_CLIENT = {
     name: `PW Quote Client ${uniqueId}`,

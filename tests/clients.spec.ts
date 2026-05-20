@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Client Management", () => {
+  test.describe.configure({ mode: "serial" });
   // Use a unique name based on timestamp to avoid conflicts
   const uniqueId = `pw-${Date.now()}`;
   const TEST_CLIENT = {
