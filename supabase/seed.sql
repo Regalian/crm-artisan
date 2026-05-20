@@ -1,0 +1,2 @@
+-- Optional local seed data goes here.
+-- This file exists to satisfy supabase/config.toml's db.seed.sql_paths setting.

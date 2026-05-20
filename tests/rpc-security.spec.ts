@@ -40,11 +40,11 @@
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { getSupabaseTestEnv } from "./helpers/supabase-env";
+
 // ── constants ──────────────────────────────────────────────────────────────────
-// These are the public/publishable keys — safe to hard-code in tests.
-const SUPABASE_URL     = "https://xzfzwwgvqwhwdquierpt.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_NPdd9PnxBUvUnmNvTQ5FkA_z6qzXc97";
-const RPC_ENDPOINT     = `${SUPABASE_URL}/rest/v1/rpc/get_next_quote_number`;
+const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseTestEnv();
+const RPC_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/get_next_quote_number`;
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 

@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 
+test.describe.configure({ mode: "serial" });
+test.setTimeout(60_000);
+
 function makeUser() {
   return {
     email: `auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`,
@@ -14,11 +17,10 @@ async function createAndLogin(page: ReturnType<typeof test extends (...args: inf
   await page.getByLabel("Confirm Password").fill(password);
   await page.getByRole("button", { name: /create account/i }).click();
 
-  // Wait for the redirect chain: signup → /login → /dashboard
-  // In dev (no email confirmation), we land on /dashboard.
-  // In prod (with confirmation), we land on /login.
-  // Either way, wait up to 15 seconds.
-  await page.waitForTimeout(2000);
+  // Wait for the redirect chain: signup → /login → /dashboard.
+  // Local Supabase can take a few seconds to create the user and issue the
+  // first session, so wait for the URL transition instead of sleeping.
+  await expect(page).toHaveURL(/\/(dashboard|login)/, { timeout: 15000 });
 
   // If we ended up on /login with a session (common in dev),
   // the page renders the authenticated layout with the login form hidden.
@@ -47,14 +49,9 @@ test.describe("Signup", () => {
     await page.getByLabel("Confirm Password").fill(user.password);
     await page.getByRole("button", { name: /create account/i }).click();
 
-    // Wait for redirect chain to settle
-    await page.waitForTimeout(2000);
-
     // With email confirmation disabled (dev), auto-auth redirects to dashboard.
-    // With it enabled (prod), user stays on /login?registered=true.
-    // Either is acceptable.
-    const url = page.url();
-    expect(url).toMatch(/\/(dashboard|login)/);
+    // With it enabled (prod), the app redirects to /login?registered=true.
+    await expect(page).toHaveURL(/\/(dashboard|login)/, { timeout: 15000 });
   });
 
   test("rejects mismatched passwords", async ({ page }) => {

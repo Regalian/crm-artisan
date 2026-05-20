@@ -1,4 +1,7 @@
-import { test, expect } from "@playwright/test";
+// Manual debugging helper.
+// This file is intentionally ignored by Playwright because it does not use the
+// standard .spec.ts / .test.ts naming for automated test runs.
+import { test } from "@playwright/test";
 
 test("debug: check dashboard URL without auth", async ({ page }) => {
   await page.goto("http://localhost:3000/dashboard", { waitUntil: "networkidle" });

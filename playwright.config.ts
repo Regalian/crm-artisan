@@ -1,20 +1,30 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const baseURL = process.env.BASE_URL || "http://127.0.0.1:3001";
+
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: ["**/unit/**", "**/integration/**", "**/manual/**"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  globalSetup: "./tests/global-setup.ts",
+  workers: 1,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
     {
+      name: "setup",
+      use: {
+        ...devices["Desktop Chrome"],
+      },
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
       name: "chromium-auth",
+      dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
         storageState: "tests/auth.json",
@@ -48,9 +58,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    command: "npm run build && npm run start -- --hostname 127.0.0.1 --port 3001",
+    url: baseURL,
+    reuseExistingServer: false,
+    timeout: 180 * 1000,
   },
 });

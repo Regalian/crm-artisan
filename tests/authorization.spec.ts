@@ -1,6 +1,13 @@
-import { test, expect, chromium, Browser, BrowserContext, Page } from "@playwright/test";
+import { test, expect, chromium, Browser, BrowserContext } from "@playwright/test";
+import { createClient, type Session } from "@supabase/supabase-js";
+
+import { getSupabaseTestEnv } from "./helpers/supabase-env";
+
+test.describe.configure({ mode: "serial" });
+test.setTimeout(90_000);
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseTestEnv();
 
 // ============================================================
 // Helpers: create isolated user sessions for cross-user testing
@@ -13,27 +20,82 @@ function makeUser() {
   };
 }
 
-async function signupAndLogin(
-  page: Page,
-  email: string,
-  password: string
-): Promise<void> {
-  await page.goto(`${BASE_URL}/signup`, { waitUntil: "networkidle" });
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(password);
-  await page.getByLabel("Confirm Password").fill(password);
-  await page.getByRole("button", { name: /create account/i }).click();
-  // In dev (no email confirm), auto-redirects to dashboard.
-  await expect(page).toHaveURL(/\/(dashboard|login)/, { timeout: 15000 });
-  // If we landed on /login?registered=true, we have a session — go to dashboard
-  if (page.url().includes("/login")) {
-    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: "networkidle" });
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
-  }
+function getProjectRef() {
+  return new URL(SUPABASE_URL).hostname.split(".")[0];
 }
 
-async function getCookies(context: BrowserContext) {
-  return context.cookies();
+function encodeSession(session: Session) {
+  return `base64-${Buffer.from(JSON.stringify(session)).toString("base64")}`;
+}
+
+async function createSession(
+  email: string,
+  password: string,
+  maxAttempts = 4,
+): Promise<Session> {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  let lastError = "Unknown error";
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const signUpResult = await supabase.auth.signUp({ email, password });
+
+    if (signUpResult.data.session) {
+      return signUpResult.data.session;
+    }
+
+    if (!signUpResult.error) {
+      const signInResult = await supabase.auth.signInWithPassword({ email, password });
+
+      if (signInResult.data.session) {
+        return signInResult.data.session;
+      }
+
+      lastError = signInResult.error?.message ?? "sign-in did not return a session";
+    } else {
+      lastError = signUpResult.error.message;
+    }
+
+    const isRateLimited =
+      lastError.toLowerCase().includes("rate limit") ||
+      lastError.toLowerCase().includes("too many");
+
+    if (isRateLimited && attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 3_000));
+      continue;
+    }
+
+    break;
+  }
+
+  throw new Error(`Failed to create security test session: ${lastError}`);
+}
+
+async function createAuthenticatedContext(
+  browser: Browser,
+  email: string,
+  password: string,
+) {
+  const context = await browser.newContext();
+  const session = await createSession(email, password);
+  const baseUrl = new URL(BASE_URL);
+
+  await context.addCookies([
+    {
+      name: `sb-${getProjectRef()}-auth-token`,
+      value: encodeSession(session),
+      domain: baseUrl.hostname,
+      path: "/",
+      expires: session.expires_at ?? Math.floor(Date.now() / 1000) + 3600,
+      httpOnly: false,
+      secure: baseUrl.protocol === "https:",
+      sameSite: "Lax",
+    },
+  ]);
+
+  return context;
 }
 
 // ============================================================
@@ -85,30 +147,18 @@ test.describe("ISSUE 2 & 3: Cross-user API data isolation", () => {
   let browser: Browser;
   let aliceContext: BrowserContext;
   let bobContext: BrowserContext;
-  let aliceCookies: any[];
-  let bobCookies: any[];
   let aliceClientIds: string[];
   let aliceJobSiteIds: string[];
   let aliceQuoteIds: string[];
 
   test.beforeAll(async () => {
-    // Create two isolated browser sessions
+    // Create two isolated authenticated sessions without going through the UI.
     browser = await chromium.launch();
-    aliceContext = await browser.newContext();
-    bobContext = await browser.newContext();
 
-    const alicePage = await aliceContext.newPage();
-    const bobPage = await bobContext.newPage();
-
-    // Sign up both users
     const alice = makeUser();
     const bob = makeUser();
-    await signupAndLogin(alicePage, alice.email, alice.password);
-    await signupAndLogin(bobPage, bob.email, bob.password);
-
-    // Capture cookies for API calls
-    aliceCookies = await getCookies(aliceContext);
-    bobCookies = await getCookies(bobContext);
+    aliceContext = await createAuthenticatedContext(browser, alice.email, alice.password);
+    bobContext = await createAuthenticatedContext(browser, bob.email, bob.password);
 
     // --- Alice creates resources ---
 
@@ -327,23 +377,15 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
   let browser: Browser;
   let aliceContext: BrowserContext;
   let bobContext: BrowserContext;
-  let aliceCookies: any[];
   let bobClientIds: string[];
 
   test.beforeAll(async () => {
     browser = await chromium.launch();
-    aliceContext = await browser.newContext();
-    bobContext = await browser.newContext();
-
-    const alicePage = await aliceContext.newPage();
-    const bobPage = await bobContext.newPage();
 
     const alice = makeUser();
     const bob = makeUser();
-    await signupAndLogin(alicePage, alice.email, alice.password);
-    await signupAndLogin(bobPage, bob.email, bob.password);
-
-    aliceCookies = await getCookies(aliceContext);
+    aliceContext = await createAuthenticatedContext(browser, alice.email, alice.password);
+    bobContext = await createAuthenticatedContext(browser, bob.email, bob.password);
 
     // Alice creates client + job site
     const clientRes = await aliceContext.request.post(`${BASE_URL}/api/clients`, {
