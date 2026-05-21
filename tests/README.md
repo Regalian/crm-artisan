@@ -15,15 +15,28 @@ npm run test:unit
 
 ## 2) Integration tests — `tests/integration/`
 - Runner: **Vitest**
-- Render helper: **React Testing Library**
-- Goal: check a few pieces working together in the browser-like `jsdom` environment
-- Current example: `tests/integration/signup-form.test.tsx`
+- Render helper: **React Testing Library** for UI-focused integration tests
+- Goal: check a few pieces working together either in a browser-like `jsdom` environment or through local app + database integration without launching Playwright
+- Current examples:
+  - `tests/integration/signup-form.test.tsx`
+  - `tests/integration/clients-crud.test.ts`
 
 Run with:
 
 ```bash
 npm run test:integration
 ```
+
+Useful split commands:
+
+```bash
+npm run test:integration:ui
+npm run test:integration:db
+```
+
+The database-backed integration command ensures local Supabase is available.
+It exercises route handlers against the local database without using Playwright
+or a browser.
 
 ## 3) End-to-end and security tests — `tests/*.spec.ts`
 - Runner: **Playwright**

@@ -352,6 +352,7 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
       (client) => client.name === "Alice Blocker"
     );
     expect(blocker).toBeTruthy();
+    if (!blocker) throw new Error("Expected to find Alice Blocker client");
 
     const res = await aliceContext.request.delete(
       `${BASE_URL}/api/clients/${blocker.id}`
