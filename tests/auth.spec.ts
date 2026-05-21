@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(60_000);
@@ -10,7 +10,7 @@ function makeUser() {
   };
 }
 
-async function createAndLogin(page: ReturnType<typeof test extends (...args: infer A) => infer R ? R : never>, email: string, password: string) {
+async function createAndLogin(page: Page, email: string, password: string) {
   await page.goto("/signup");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
@@ -83,7 +83,7 @@ test.describe("Signup", () => {
 test.describe("Login", () => {
   test("logs in with valid credentials", async ({ page }) => {
     const user = makeUser();
-    await createAndLogin(page as any, user.email, user.password);
+    await createAndLogin(page, user.email, user.password);
 
     // We're on dashboard. Sign out first to get a clean login page.
     await page.getByRole("button", { name: /sign out/i }).first().click();
@@ -104,7 +104,7 @@ test.describe("Login", () => {
 
   test("rejects wrong password", async ({ page }) => {
     const user = makeUser();
-    await createAndLogin(page as any, user.email, user.password);
+    await createAndLogin(page, user.email, user.password);
 
     // Sign out
     await page.getByRole("button", { name: /sign out/i }).first().click();
@@ -133,7 +133,7 @@ test.describe("Login", () => {
 test.describe("Logout", () => {
   test("signs out from desktop sidebar", async ({ page }) => {
     const user = makeUser();
-    await createAndLogin(page as any, user.email, user.password);
+    await createAndLogin(page, user.email, user.password);
 
     await expect(page.locator("aside")).toBeVisible();
     await page.getByRole("button", { name: /sign out/i }).first().click();
@@ -143,7 +143,7 @@ test.describe("Logout", () => {
 
   test("signs out from mobile menu", async ({ page }) => {
     const user = makeUser();
-    await createAndLogin(page as any, user.email, user.password);
+    await createAndLogin(page, user.email, user.password);
 
     // Sign out via desktop sidebar (reliable), then check mobile layout
     await page.getByRole("button", { name: /sign out/i }).first().click();
