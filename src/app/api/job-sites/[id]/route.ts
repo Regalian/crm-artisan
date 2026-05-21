@@ -1,3 +1,7 @@
+import {
+  canTransitionJobSiteStatus,
+  isValidJobSiteStatus,
+} from "@/lib/job-site-status";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -25,7 +29,7 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyJobSiteAccess(supabase, id, userId);
@@ -62,7 +66,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyJobSiteAccess(supabase, id, userId);
@@ -78,9 +82,28 @@ export async function PUT(
       return NextResponse.json({ error: "Address is required" }, { status: 400 });
     }
 
-    const validStatuses = ["planned", "in_progress", "completed"];
-    if (status && !validStatuses.includes(status)) {
+    const hasStatus = status !== undefined && status !== null;
+    if (hasStatus && !isValidJobSiteStatus(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    if (hasStatus) {
+      const { data: currentJobSite, error: currentJobSiteError } = await supabase
+        .from("job_sites")
+        .select("status")
+        .eq("id", id)
+        .single();
+
+      if (currentJobSiteError || !currentJobSite || !isValidJobSiteStatus(currentJobSite.status)) {
+        return NextResponse.json({ error: "Job site not found" }, { status: 404 });
+      }
+
+      if (!canTransitionJobSiteStatus(currentJobSite.status, status)) {
+        return NextResponse.json(
+          { error: `Invalid status transition from ${currentJobSite.status} to ${status}` },
+          { status: 400 },
+        );
+      }
     }
 
     if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
@@ -94,7 +117,7 @@ export async function PUT(
         address: address.trim(),
         start_date: start_date || null,
         end_date: end_date || null,
-        status: status || "planned",
+        status: hasStatus ? status : undefined,
         notes: notes?.trim() || null,
       })
       .eq("id", id)
@@ -123,7 +146,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyJobSiteAccess(supabase, id, userId);

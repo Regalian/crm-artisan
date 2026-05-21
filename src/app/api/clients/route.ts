@@ -1,3 +1,4 @@
+import { validateRequiredEmail } from "@/lib/validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -62,15 +63,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate email format if provided
-    if (email && typeof email === "string" && email.trim() !== "") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        return NextResponse.json(
-          { error: "Please enter a valid email address" },
-          { status: 400 }
-        );
-      }
+    const emailError = validateRequiredEmail(email);
+    if (emailError) {
+      return NextResponse.json(
+        { error: emailError },
+        { status: 400 }
+      );
     }
 
     const { data: client, error: insertError } = await supabase

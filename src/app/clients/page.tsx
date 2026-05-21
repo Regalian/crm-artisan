@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, Phone, Mail, MapPin, AlertCircle, Loader2, UserPlus, X, CheckCircle, Trash2 } from "lucide-react";
 import { ErrorToast } from "@/app/components/Toast";
+import { validateRequiredEmail } from "@/lib/validation";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -312,10 +313,9 @@ function ClientModal({
 
     if (!formData.name.trim()) newErrors.name = "Name is required";
     if (!formData.phone.trim()) newErrors.phone = "Phone is required";
-    if (formData.email.trim()) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) newErrors.email = "Please enter a valid email address";
-    }
+
+    const emailError = validateRequiredEmail(formData.email);
+    if (emailError) newErrors.email = emailError;
 
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -391,8 +391,10 @@ function ClientModal({
 
       {/* Email Field */}
       <div>
-        <label htmlFor={`email-${idSuffix}`} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email</label>
-        <input type="email" id={`email-${idSuffix}`} name="email" value={formData.email} onChange={handleChange}
+        <label htmlFor={`email-${idSuffix}`} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+          Email <span className="text-red-500">*</span>
+        </label>
+        <input type="email" id={`email-${idSuffix}`} name="email" value={formData.email} onChange={handleChange} required
           className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${fieldErrors.email ? "border-red-500 dark:border-red-500" : "border-zinc-300 dark:border-zinc-700"}`}
           placeholder="john@example.com" autoComplete="email" />
         {fieldErrors.email && (

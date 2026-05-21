@@ -1,3 +1,4 @@
+import { isValidJobSiteStatus } from "@/lib/job-site-status";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,7 +10,7 @@ async function getUserId(supabase: Awaited<ReturnType<typeof createClient>>): Pr
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
@@ -74,9 +75,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Validate status if provided
-    const validStatuses = ["planned", "in_progress", "completed"];
-    if (status && !validStatuses.includes(status)) {
+    const hasStatus = status !== undefined && status !== null;
+    if (hasStatus && !isValidJobSiteStatus(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         address: address.trim(),
         start_date: start_date || null,
         end_date: end_date || null,
-        status: status || "planned",
+        status: hasStatus ? status : "planned",
         notes: notes?.trim() || null,
       })
       .select(`

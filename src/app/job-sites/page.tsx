@@ -4,6 +4,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, ClipboardList } from "lucide-react";
 import { ErrorToast } from "@/app/components/Toast";
+import {
+  canTransitionJobSiteStatus,
+  getAllowedJobSiteStatusTransitions,
+  JOB_SITE_STATUSES,
+  type JobSiteStatus,
+} from "@/lib/job-site-status";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -18,7 +24,7 @@ interface JobSite {
   address: string;
   start_date: string | null;
   end_date: string | null;
-  status: "planned" | "in_progress" | "completed";
+  status: JobSiteStatus;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -28,7 +34,7 @@ interface JobSite {
 type LoadingState = "idle" | "loading" | "success" | "error";
 
 // Status helpers
-const STATUS_CONFIG = {
+const STATUS_CONFIG: Record<JobSiteStatus, { label: string; bg: string; text: string }> = {
   planned: { label: "Planned", bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300" },
   in_progress: { label: "In Progress", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" },
   completed: { label: "Completed", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300" },
@@ -291,18 +297,26 @@ function JobSiteModal({
   jobSite?: JobSite | null;
 }) {
   const isEditMode = !!jobSite;
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    client_id: string;
+    title: string;
+    address: string;
+    start_date: string;
+    end_date: string;
+    status: JobSiteStatus;
+    notes: string;
+  }>({
     client_id: jobSite?.client_id || "",
     title: jobSite?.title || "",
     address: jobSite?.address || "",
     start_date: jobSite?.start_date || "",
     end_date: jobSite?.end_date || "",
-    status: jobSite?.status || "planned" as JobSite["status"],
+    status: jobSite?.status ?? "planned",
     notes: jobSite?.notes || "",
   });
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ client_id?: string; title?: string; address?: string; dates?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ client_id?: string; title?: string; address?: string; dates?: string; status?: string; general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch clients when modal opens (for the dropdown)
@@ -328,7 +342,7 @@ function JobSiteModal({
         address: jobSite?.address || "",
         start_date: jobSite?.start_date || "",
         end_date: jobSite?.end_date || "",
-        status: jobSite?.status || "planned",
+        status: jobSite?.status ?? "planned",
         notes: jobSite?.notes || "",
       });
       setErrors({});
@@ -359,7 +373,7 @@ function JobSiteModal({
   }, [isOpen]);
 
   const validateForm = (): boolean => {
-    const newErrors: { client_id?: string; title?: string; address?: string; dates?: string } = {};
+    const newErrors: { client_id?: string; title?: string; address?: string; dates?: string; status?: string } = {};
 
     if (!formData.client_id) {
       newErrors.client_id = "Please select a client";
@@ -375,6 +389,10 @@ function JobSiteModal({
 
     if (formData.start_date && formData.end_date && new Date(formData.start_date) > new Date(formData.end_date)) {
       newErrors.dates = "Start date must be before end date";
+    }
+
+    if (isEditMode && jobSite && !canTransitionJobSiteStatus(jobSite.status, formData.status)) {
+      newErrors.status = `Cannot change status from ${STATUS_CONFIG[jobSite.status].label} to ${STATUS_CONFIG[formData.status].label}`;
     }
 
     setErrors(newErrors);
@@ -425,13 +443,20 @@ function JobSiteModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "status" ? value as JobSiteStatus : value,
+    }));
     if (errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   if (!isOpen) return null;
+
+  const availableStatuses = isEditMode && jobSite
+    ? getAllowedJobSiteStatusTransitions(jobSite.status)
+    : JOB_SITE_STATUSES;
 
   const renderFormFields = (idSuffix: string) => (
     <>
@@ -593,12 +618,22 @@ function JobSiteModal({
           name="status"
           value={formData.status}
           onChange={handleChange}
-          className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+          className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border rounded-lg text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+            errors.status ? "border-red-500 dark:border-red-500" : "border-zinc-300 dark:border-zinc-700"
+          }`}
         >
-          <option value="planned">Planned</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
+          {availableStatuses.map((status) => (
+            <option key={status} value={status}>
+              {STATUS_CONFIG[status].label}
+            </option>
+          ))}
         </select>
+        {errors.status && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+            <AlertCircle size={14} />
+            {errors.status}
+          </p>
+        )}
       </div>
 
       {/* Notes Field */}

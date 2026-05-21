@@ -1,3 +1,4 @@
+import { validateRequiredEmail } from "@/lib/validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -27,7 +28,7 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { data: client, error } = await supabase
@@ -55,7 +56,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
@@ -65,11 +66,9 @@ export async function PUT(
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
-    if (email && typeof email === "string" && email.trim() !== "") {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
-      }
+    const emailError = validateRequiredEmail(email);
+    if (emailError) {
+      return NextResponse.json({ error: emailError }, { status: 400 });
     }
 
     const hasAccess = await verifyClientAccess(supabase, id, userId);
@@ -109,7 +108,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyClientAccess(supabase, id, userId);
