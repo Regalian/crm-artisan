@@ -1,7 +1,8 @@
+import { isValidJobSiteStatus, type JobSiteStatus } from "@/lib/job-site-status";
 import {
-  canTransitionJobSiteStatus,
-  isValidJobSiteStatus,
-} from "@/lib/job-site-status";
+  getJobSiteValidationError,
+  normalizeJobSiteInput,
+} from "@/lib/job-site-validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -73,19 +74,8 @@ export async function PUT(
     if (!hasAccess) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const body = await request.json();
-    const { title, address, start_date, end_date, status, notes } = body;
-
-    if (!title || typeof title !== "string" || title.trim() === "") {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-    if (!address || typeof address !== "string" || address.trim() === "") {
-      return NextResponse.json({ error: "Address is required" }, { status: 400 });
-    }
-
-    const hasStatus = status !== undefined && status !== null;
-    if (hasStatus && !isValidJobSiteStatus(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
+    const hasStatus = body.status !== undefined && body.status !== null && body.status !== "";
+    let currentStatus: JobSiteStatus | undefined;
 
     if (hasStatus) {
       const { data: currentJobSite, error: currentJobSiteError } = await supabase
@@ -98,27 +88,25 @@ export async function PUT(
         return NextResponse.json({ error: "Job site not found" }, { status: 404 });
       }
 
-      if (!canTransitionJobSiteStatus(currentJobSite.status, status)) {
-        return NextResponse.json(
-          { error: `Invalid status transition from ${currentJobSite.status} to ${status}` },
-          { status: 400 },
-        );
-      }
+      currentStatus = currentJobSite.status;
     }
 
-    if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
-      return NextResponse.json({ error: "Start date must be before end date" }, { status: 400 });
+    const validationError = getJobSiteValidationError(body, { currentStatus });
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
+
+    const normalizedInput = normalizeJobSiteInput(body);
 
     const { data: jobSite, error } = await supabase
       .from("job_sites")
       .update({
-        title: title.trim(),
-        address: address.trim(),
-        start_date: start_date || null,
-        end_date: end_date || null,
-        status: hasStatus ? status : undefined,
-        notes: notes?.trim() || null,
+        title: normalizedInput.title,
+        address: normalizedInput.address,
+        start_date: normalizedInput.start_date,
+        end_date: normalizedInput.end_date,
+        status: hasStatus ? normalizedInput.status ?? undefined : undefined,
+        notes: normalizedInput.notes,
       })
       .eq("id", id)
       .select(`

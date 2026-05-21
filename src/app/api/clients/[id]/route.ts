@@ -1,4 +1,7 @@
-import { validateRequiredEmail } from "@/lib/validation";
+import {
+  getClientValidationError,
+  normalizeClientInput,
+} from "@/lib/client-validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -59,29 +62,25 @@ export async function PUT(
     const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = await request.json();
-    const { name, phone, email, address, notes } = body;
-
-    if (!name || typeof name !== "string" || name.trim() === "") {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
-    }
-
-    const emailError = validateRequiredEmail(email);
-    if (emailError) {
-      return NextResponse.json({ error: emailError }, { status: 400 });
-    }
-
     const hasAccess = await verifyClientAccess(supabase, id, userId);
     if (!hasAccess) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+    const body = await request.json();
+    const validationError = getClientValidationError(body);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
+
+    const normalizedInput = normalizeClientInput(body);
 
     const { data: client, error } = await supabase
       .from("clients")
       .update({
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        email: email?.trim() || null,
-        address: address?.trim() || null,
-        notes: notes?.trim() || null,
+        name: normalizedInput.name,
+        phone: normalizedInput.phone,
+        email: normalizedInput.email,
+        address: normalizedInput.address,
+        notes: normalizedInput.notes,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)

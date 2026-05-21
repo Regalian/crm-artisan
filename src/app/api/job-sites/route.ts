@@ -1,4 +1,7 @@
-import { isValidJobSiteStatus } from "@/lib/job-site-status";
+import {
+  getJobSiteValidationError,
+  normalizeJobSiteInput,
+} from "@/lib/job-site-validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -50,24 +53,18 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await request.json();
-    const { client_id, title, address, start_date, end_date, status, notes } = body;
+    const validationError = getJobSiteValidationError(body, { requireClient: true });
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
 
-    // Validate required fields
-    if (!client_id) {
-      return NextResponse.json({ error: "Client is required" }, { status: 400 });
-    }
-    if (!title || typeof title !== "string" || title.trim() === "") {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-    if (!address || typeof address !== "string" || address.trim() === "") {
-      return NextResponse.json({ error: "Address is required" }, { status: 400 });
-    }
+    const normalizedInput = normalizeJobSiteInput(body);
 
     // Validate client belongs to user
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, user_id")
-      .eq("id", client_id)
+      .eq("id", normalizedInput.client_id!)
       .eq("user_id", userId)
       .single();
 
@@ -75,26 +72,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const hasStatus = status !== undefined && status !== null;
-    if (hasStatus && !isValidJobSiteStatus(status)) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
-
-    // Validate dates
-    if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
-      return NextResponse.json({ error: "Start date must be before end date" }, { status: 400 });
-    }
+    const hasStatus = normalizedInput.status !== null;
 
     const { data: jobSite, error: insertError } = await supabase
       .from("job_sites")
       .insert({
-        client_id,
-        title: title.trim(),
-        address: address.trim(),
-        start_date: start_date || null,
-        end_date: end_date || null,
-        status: hasStatus ? status : "planned",
-        notes: notes?.trim() || null,
+        client_id: normalizedInput.client_id!,
+        title: normalizedInput.title,
+        address: normalizedInput.address,
+        start_date: normalizedInput.start_date,
+        end_date: normalizedInput.end_date,
+        status: hasStatus ? normalizedInput.status : "planned",
+        notes: normalizedInput.notes,
       })
       .select(`
         *,

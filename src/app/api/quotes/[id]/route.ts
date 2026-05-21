@@ -1,3 +1,5 @@
+import { isValidQuoteStatus } from "@/lib/quote-status";
+import { normalizeTrimmedString } from "@/lib/validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -35,7 +37,7 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyQuoteAccess(supabase, id, userId);
@@ -74,7 +76,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyQuoteAccess(supabase, id, userId);
@@ -88,8 +90,8 @@ export async function PUT(
     const body = await request.json();
     const { date, status, notes } = body;
 
-    const validStatuses = ["draft", "sent", "accepted", "rejected"];
-    if (status && !validStatuses.includes(status)) {
+    const hasStatus = status !== undefined && status !== null && status !== "";
+    if (hasStatus && !isValidQuoteStatus(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
@@ -97,8 +99,8 @@ export async function PUT(
       .from("quotes")
       .update({
         date: date || undefined,
-        status: status || undefined,
-        notes: notes !== undefined ? notes.trim() : undefined,
+        status: hasStatus ? status : undefined,
+        notes: notes !== undefined ? normalizeTrimmedString(notes) : undefined,
       })
       .eq("id", id)
       .select(`
@@ -126,7 +128,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyQuoteAccess(supabase, id, userId);
@@ -160,7 +162,7 @@ export async function POST(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyQuoteAccess(supabase, id, userId);

@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { createClientViaUi, createJobSiteViaUi, deleteClientsMatching } from "./helpers/ui-flows";
+
 test.describe("Quote Lifecycle", () => {
   test.describe.configure({ mode: "serial" });
   const uniqueId = `pw-${Date.now()}`;
@@ -23,35 +25,14 @@ test.describe("Quote Lifecycle", () => {
     await page.setViewportSize({ width: 1280, height: 720 });
 
     // --- STEP 1: CREATE A CLIENT ---
-    await page.goto("/clients");
-    await page.getByRole("button", { name: /add client/i }).click();
-    await expect(page.locator("#name-desktop")).toBeVisible({ timeout: 5000 });
-
-    await page.locator("#name-desktop").fill(TEST_CLIENT.name);
-    await page.locator("#phone-desktop").fill(TEST_CLIENT.phone);
-    await page.locator("#email-desktop").fill(TEST_CLIENT.email);
-    await page.locator("#address-desktop").fill(TEST_CLIENT.address);
-    await page.getByRole("button", { name: /create client/i }).click();
-
-    await expect(page.getByText(/added successfully/i)).toBeVisible({ timeout: 5000 });
-
-    const clientRow = page.locator("tbody tr").filter({ hasText: TEST_CLIENT.name });
-    await expect(clientRow).toBeVisible();
+    await createClientViaUi(page, TEST_CLIENT);
 
     // --- STEP 2: CREATE A JOB SITE ---
-    await page.goto("/job-sites");
-    await page.getByRole("button", { name: /add job site/i }).click();
-    await expect(page.locator("#title-desktop")).toBeVisible({ timeout: 5000 });
-
-    await page.locator("#client-desktop").selectOption({ label: TEST_CLIENT.name });
-    await page.locator("#title-desktop").fill(TEST_JOB_SITE.title);
-    await page.locator("#address-desktop").fill(TEST_JOB_SITE.address);
-    await page.getByRole("button", { name: /create job site/i }).click();
-
-    await expect(page.getByText(/added successfully/i)).toBeVisible({ timeout: 5000 });
-
-    const jobSiteRow = page.locator("tbody tr").filter({ hasText: TEST_JOB_SITE.title });
-    await expect(jobSiteRow).toBeVisible();
+    const jobSiteRow = await createJobSiteViaUi(page, {
+      clientName: TEST_CLIENT.name,
+      title: TEST_JOB_SITE.title,
+      address: TEST_JOB_SITE.address,
+    });
 
     // --- STEP 3: CREATE A QUOTE WITH 3 LINE ITEMS ---
     await jobSiteRow.locator("button[aria-label='Create quote']").click();
@@ -129,15 +110,6 @@ test.describe("Quote Lifecycle", () => {
 
   // --- CLEANUP ---
   test("cleanup: remove test client and descendants", async ({ page }) => {
-    await page.goto("/clients");
-    await page.waitForLoadState("networkidle");
-
-    const leftoverClients = page.locator("tbody tr").filter({ hasText: "PW Quote Client pw-" });
-    const count = await leftoverClients.count();
-    for (let i = 0; i < count; i++) {
-      await leftoverClients.first().locator("button[aria-label='Delete client']").click();
-      await page.getByRole("button", { name: /^delete$/i }).click();
-      await page.waitForTimeout(500);
-    }
+    await deleteClientsMatching(page, "PW Quote Client pw-");
   });
 });

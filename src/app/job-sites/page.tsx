@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { Search, MapPin, AlertCircle, Loader2, Plus, X, CheckCircle, Trash2, Calendar, ClipboardList } from "lucide-react";
 import { ErrorToast } from "@/app/components/Toast";
 import {
-  canTransitionJobSiteStatus,
   getAllowedJobSiteStatusTransitions,
   JOB_SITE_STATUSES,
+  JOB_SITE_STATUS_LABELS,
   type JobSiteStatus,
 } from "@/lib/job-site-status";
+import {
+  validateJobSiteInput,
+  type JobSiteValidationErrors,
+} from "@/lib/job-site-validation";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -35,9 +39,9 @@ type LoadingState = "idle" | "loading" | "success" | "error";
 
 // Status helpers
 const STATUS_CONFIG: Record<JobSiteStatus, { label: string; bg: string; text: string }> = {
-  planned: { label: "Planned", bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300" },
-  in_progress: { label: "In Progress", bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" },
-  completed: { label: "Completed", bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300" },
+  planned: { label: JOB_SITE_STATUS_LABELS.planned, bg: "bg-amber-100 dark:bg-amber-900/30", text: "text-amber-700 dark:text-amber-300" },
+  in_progress: { label: JOB_SITE_STATUS_LABELS.in_progress, bg: "bg-blue-100 dark:bg-blue-900/30", text: "text-blue-700 dark:text-blue-300" },
+  completed: { label: JOB_SITE_STATUS_LABELS.completed, bg: "bg-green-100 dark:bg-green-900/30", text: "text-green-700 dark:text-green-300" },
 };
 
 function StatusBadge({ status }: { status: JobSite["status"] }) {
@@ -316,7 +320,7 @@ function JobSiteModal({
   });
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ client_id?: string; title?: string; address?: string; dates?: string; status?: string; general?: string }>({});
+  const [errors, setErrors] = useState<JobSiteValidationErrors & { general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch clients when modal opens (for the dropdown)
@@ -373,27 +377,11 @@ function JobSiteModal({
   }, [isOpen]);
 
   const validateForm = (): boolean => {
-    const newErrors: { client_id?: string; title?: string; address?: string; dates?: string; status?: string } = {};
-
-    if (!formData.client_id) {
-      newErrors.client_id = "Please select a client";
-    }
-
-    if (!formData.title.trim()) {
-      newErrors.title = "Title is required";
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = "Address is required";
-    }
-
-    if (formData.start_date && formData.end_date && new Date(formData.start_date) > new Date(formData.end_date)) {
-      newErrors.dates = "Start date must be before end date";
-    }
-
-    if (isEditMode && jobSite && !canTransitionJobSiteStatus(jobSite.status, formData.status)) {
-      newErrors.status = `Cannot change status from ${STATUS_CONFIG[jobSite.status].label} to ${STATUS_CONFIG[formData.status].label}`;
-    }
+    const newErrors = validateJobSiteInput(formData, {
+      requireClient: true,
+      currentStatus: isEditMode && jobSite ? jobSite.status : undefined,
+      transitionErrorFormat: "label",
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

@@ -1,4 +1,7 @@
-import { validateRequiredEmail } from "@/lib/validation";
+import {
+  getClientValidationError,
+  normalizeClientInput,
+} from "@/lib/client-validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -53,33 +56,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, email, address, notes } = body;
-
-    // Server-side validation
-    if (!name || typeof name !== "string" || name.trim() === "") {
+    const validationError = getClientValidationError(body);
+    if (validationError) {
       return NextResponse.json(
-        { error: "Name is required" },
+        { error: validationError },
         { status: 400 }
       );
     }
 
-    const emailError = validateRequiredEmail(email);
-    if (emailError) {
-      return NextResponse.json(
-        { error: emailError },
-        { status: 400 }
-      );
-    }
+    const normalizedInput = normalizeClientInput(body);
 
     const { data: client, error: insertError } = await supabase
       .from("clients")
       .insert({
         user_id: userId,
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        email: email?.trim() || null,
-        address: address?.trim() || null,
-        notes: notes?.trim() || null,
+        name: normalizedInput.name,
+        phone: normalizedInput.phone,
+        email: normalizedInput.email,
+        address: normalizedInput.address,
+        notes: normalizedInput.notes,
       })
       .select()
       .single();

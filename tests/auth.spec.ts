@@ -1,13 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { makeUser as makeTestUser } from "./helpers/test-users";
+
 test.describe.configure({ mode: "serial" });
 test.setTimeout(60_000);
 
 function makeUser() {
-  return {
-    email: `auth-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`,
-    password: "testpassword123",
-  };
+  return makeTestUser("auth", "testpassword123");
 }
 
 async function createAndLogin(page: Page, email: string, password: string) {

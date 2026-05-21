@@ -1,50 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 
-import { getSupabaseTestEnv } from "./helpers/supabase-env";
-
-const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseTestEnv();
-
-function makeEmail(prefix: string): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-}
-
-async function signUpUser(
-  email: string,
-  password: string,
-  maxAttempts = 4,
-): Promise<{ token: string; userId: string }> {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  let lastError: string | undefined;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-
-    if (!error && data.session) {
-      return {
-        token: data.session.access_token,
-        userId: data.user!.id,
-      };
-    }
-
-    lastError = error?.message ?? "no session returned";
-    const isRateLimited =
-      lastError.toLowerCase().includes("rate limit") ||
-      lastError.toLowerCase().includes("too many");
-
-    if (isRateLimited && attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, attempt * 3_000));
-      continue;
-    }
-
-    break;
-  }
-
-  throw new Error(`signUp failed for ${email}: ${lastError}`);
-}
+import { SUPABASE_ANON_KEY, SUPABASE_URL, signUpUser } from "./helpers/supabase-auth";
+import { makeEmail } from "./helpers/test-users";
 
 async function restInsert<T extends object>(
   token: string,

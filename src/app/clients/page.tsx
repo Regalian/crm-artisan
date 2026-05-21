@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Search, Phone, Mail, MapPin, AlertCircle, Loader2, UserPlus, X, CheckCircle, Trash2 } from "lucide-react";
 import { ErrorToast } from "@/app/components/Toast";
-import { validateRequiredEmail } from "@/lib/validation";
+import { validateClientInput, type ClientValidationErrors } from "@/lib/client-validation";
 
 // Type definitions - matches Supabase schema
 interface Client {
@@ -268,7 +268,7 @@ function ClientModal({
     address: client?.address || "",
     notes: client?.notes || "",
   });
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<ClientValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when modal opens
@@ -309,13 +309,7 @@ function ClientModal({
   }, [isOpen]);
 
   const validateForm = (): boolean => {
-    const newErrors: { name?: string; phone?: string; email?: string } = {};
-
-    if (!formData.name.trim()) newErrors.name = "Name is required";
-    if (!formData.phone.trim()) newErrors.phone = "Phone is required";
-
-    const emailError = validateRequiredEmail(formData.email);
-    if (emailError) newErrors.email = emailError;
+    const newErrors = validateClientInput(formData, { requirePhone: true });
 
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;

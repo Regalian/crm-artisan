@@ -1,102 +1,12 @@
 import { test, expect, chromium, Browser, BrowserContext } from "@playwright/test";
-import { createClient, type Session } from "@supabase/supabase-js";
 
-import { getSupabaseTestEnv } from "./helpers/supabase-env";
+import { createAuthenticatedContext } from "./helpers/supabase-auth";
+import { makeUser } from "./helpers/test-users";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(90_000);
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
-const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseTestEnv();
-
-// ============================================================
-// Helpers: create isolated user sessions for cross-user testing
-// ============================================================
-
-function makeUser() {
-  return {
-    email: `sec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`,
-    password: "securepassword123!",
-  };
-}
-
-function getProjectRef() {
-  return new URL(SUPABASE_URL).hostname.split(".")[0];
-}
-
-function encodeSession(session: Session) {
-  return `base64-${Buffer.from(JSON.stringify(session)).toString("base64")}`;
-}
-
-async function createSession(
-  email: string,
-  password: string,
-  maxAttempts = 4,
-): Promise<Session> {
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  let lastError = "Unknown error";
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const signUpResult = await supabase.auth.signUp({ email, password });
-
-    if (signUpResult.data.session) {
-      return signUpResult.data.session;
-    }
-
-    if (!signUpResult.error) {
-      const signInResult = await supabase.auth.signInWithPassword({ email, password });
-
-      if (signInResult.data.session) {
-        return signInResult.data.session;
-      }
-
-      lastError = signInResult.error?.message ?? "sign-in did not return a session";
-    } else {
-      lastError = signUpResult.error.message;
-    }
-
-    const isRateLimited =
-      lastError.toLowerCase().includes("rate limit") ||
-      lastError.toLowerCase().includes("too many");
-
-    if (isRateLimited && attempt < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, attempt * 3_000));
-      continue;
-    }
-
-    break;
-  }
-
-  throw new Error(`Failed to create security test session: ${lastError}`);
-}
-
-async function createAuthenticatedContext(
-  browser: Browser,
-  email: string,
-  password: string,
-) {
-  const context = await browser.newContext();
-  const session = await createSession(email, password);
-  const baseUrl = new URL(BASE_URL);
-
-  await context.addCookies([
-    {
-      name: `sb-${getProjectRef()}-auth-token`,
-      value: encodeSession(session),
-      domain: baseUrl.hostname,
-      path: "/",
-      expires: session.expires_at ?? Math.floor(Date.now() / 1000) + 3600,
-      httpOnly: false,
-      secure: baseUrl.protocol === "https:",
-      sameSite: "Lax",
-    },
-  ]);
-
-  return context;
-}
 
 // ============================================================
 // ISSUE 1: proxy.ts is dead code — no unauthenticated redirect
@@ -155,10 +65,10 @@ test.describe("ISSUE 2 & 3: Cross-user API data isolation", () => {
     // Create two isolated authenticated sessions without going through the UI.
     browser = await chromium.launch();
 
-    const alice = makeUser();
-    const bob = makeUser();
-    aliceContext = await createAuthenticatedContext(browser, alice.email, alice.password);
-    bobContext = await createAuthenticatedContext(browser, bob.email, bob.password);
+    const alice = makeUser("sec");
+    const bob = makeUser("sec");
+    aliceContext = await createAuthenticatedContext(browser, BASE_URL, alice.email, alice.password);
+    bobContext = await createAuthenticatedContext(browser, BASE_URL, bob.email, bob.password);
 
     // --- Alice creates resources ---
 
@@ -382,15 +292,19 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
   test.beforeAll(async () => {
     browser = await chromium.launch();
 
-    const alice = makeUser();
-    const bob = makeUser();
-    aliceContext = await createAuthenticatedContext(browser, alice.email, alice.password);
-    bobContext = await createAuthenticatedContext(browser, bob.email, bob.password);
+    const alice = makeUser("sec");
+    const bob = makeUser("sec");
+    aliceContext = await createAuthenticatedContext(browser, BASE_URL, alice.email, alice.password);
+    bobContext = await createAuthenticatedContext(browser, BASE_URL, bob.email, bob.password);
 
     // Alice creates client + job site
     const clientRes = await aliceContext.request.post(`${BASE_URL}/api/clients`, {
       headers: { "Content-Type": "application/json" },
-      data: { name: "Alice Blocker", phone: "07700 222222" },
+      data: {
+        name: "Alice Blocker",
+        phone: "07700 222222",
+        email: "alice-blocker@example.com",
+      },
     });
     const clientData = await clientRes.json();
     const aliceClientId = clientData.client.id;
@@ -407,7 +321,11 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
     // Bob creates his own client (no job sites — should be deletable)
     const bobClientRes = await bobContext.request.post(`${BASE_URL}/api/clients`, {
       headers: { "Content-Type": "application/json" },
-      data: { name: "Bob Client", phone: "07700 333333" },
+      data: {
+        name: "Bob Client",
+        phone: "07700 333333",
+        email: "bob-client@example.com",
+      },
     });
     const bobClientData = await bobClientRes.json();
     bobClientIds = [bobClientData.client.id];
@@ -430,8 +348,8 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
     // First, re-fetch Alice's client ID (it's the one with the job site)
     const listRes = await aliceContext.request.get(`${BASE_URL}/api/clients`);
     const listData = await listRes.json();
-    const blocker = listData.clients.find(
-      (c: any) => c.name === "Alice Blocker"
+    const blocker = (listData.clients as Array<{ id: string; name: string }>).find(
+      (client) => client.name === "Alice Blocker"
     );
     expect(blocker).toBeTruthy();
 

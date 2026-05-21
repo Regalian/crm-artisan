@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { createClientViaUi, deleteClientsMatching, getTableRowByText } from "./helpers/ui-flows";
+
 test.describe("Client Management", () => {
   test.describe.configure({ mode: "serial" });
   // Use a unique name based on timestamp to avoid conflicts
@@ -20,24 +22,7 @@ test.describe("Client Management", () => {
   });
 
   test("full client lifecycle: create, edit phone, delete", async ({ page }) => {
-    // --- CREATE CLIENT ---
-    await page.getByRole("button", { name: /add client/i }).click();
-    await expect(page.locator("#name-desktop")).toBeVisible({ timeout: 5000 });
-
-    await page.locator("#name-desktop").fill(TEST_CLIENT.name);
-    await page.locator("#phone-desktop").fill(TEST_CLIENT.phone);
-    await page.locator("#email-desktop").fill(TEST_CLIENT.email);
-    await page.locator("#address-desktop").fill(TEST_CLIENT.address);
-    await page.locator("#notes-desktop").fill(TEST_CLIENT.notes);
-
-    await page.getByRole("button", { name: /create client/i }).click();
-
-    // Wait for success
-    await expect(page.getByText(/added successfully/i)).toBeVisible({ timeout: 5000 });
-
-    // Wait for the table row with our client
-    const clientRow = page.locator("tbody tr").filter({ hasText: TEST_CLIENT.name }).filter({ hasText: TEST_CLIENT.phone });
-    await expect(clientRow).toBeVisible();
+    const clientRow = await createClientViaUi(page, TEST_CLIENT);
 
     // --- EDIT PHONE ---
     // Click on the client name in the row
@@ -55,7 +40,7 @@ test.describe("Client Management", () => {
     await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 5000 });
 
     // Verify updated phone in table
-    const updatedRow = page.locator("tbody tr").filter({ hasText: TEST_CLIENT.name }).filter({ hasText: UPDATED_PHONE });
+    const updatedRow = getTableRowByText(page, TEST_CLIENT.name, UPDATED_PHONE);
     await expect(updatedRow).toBeVisible();
 
     // --- DELETE CLIENT ---
@@ -74,18 +59,6 @@ test.describe("Client Management", () => {
   });
 
   test("cleanup: remove test data", async ({ page }) => {
-    // This test runs last and cleans up any leftover test clients
-    await page.goto("/clients");
-    
-    // Delete any clients that match our pattern
-    const leftoverClients = page.locator("tbody tr").filter({ hasText: "Playwright Client pw-" });
-    
-    // Delete each one
-    const count = await leftoverClients.count();
-    for (let i = 0; i < count; i++) {
-      await leftoverClients.first().locator("button[aria-label='Delete client']").click();
-      await page.getByRole("button", { name: /^delete$/i }).click();
-      await page.waitForTimeout(500); // Wait for deletion to complete
-    }
+    await deleteClientsMatching(page, "Playwright Client pw-");
   });
 });

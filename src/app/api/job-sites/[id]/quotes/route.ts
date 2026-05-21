@@ -1,3 +1,5 @@
+import { isValidQuoteStatus } from "@/lib/quote-status";
+import { normalizeTrimmedString } from "@/lib/validation";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -24,7 +26,7 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyJobSiteAccess(supabase, id, userId);
@@ -58,7 +60,7 @@ export async function POST(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyJobSiteAccess(supabase, id, userId);
@@ -67,9 +69,8 @@ export async function POST(
     const body = await request.json();
     const { date, status, notes, line_items } = body;
 
-    // Validate status if provided
-    const validStatuses = ["draft", "sent", "accepted", "rejected"];
-    if (status && !validStatuses.includes(status)) {
+    const hasStatus = status !== undefined && status !== null && status !== "";
+    if (hasStatus && !isValidQuoteStatus(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
 
@@ -94,8 +95,8 @@ export async function POST(
         job_site_id: id,
         quote_number: quoteNumber,
         date: date || new Date().toISOString().split('T')[0],
-        status: status || "draft",
-        notes: notes?.trim() || null,
+        status: hasStatus ? status : "draft",
+        notes: normalizeTrimmedString(notes),
       })
       .select()
       .single();

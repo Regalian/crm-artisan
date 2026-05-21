@@ -38,64 +38,14 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 
-import { getSupabaseTestEnv } from "./helpers/supabase-env";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, signUpUser } from "./helpers/supabase-auth";
+import { makeEmail } from "./helpers/test-users";
 
 // ── constants ──────────────────────────────────────────────────────────────────
-const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseTestEnv();
 const RPC_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/get_next_quote_number`;
 
 // ── helpers ────────────────────────────────────────────────────────────────────
-
-function makeEmail(): string {
-  return `sec-rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-}
-
-/**
- * Sign up a fresh user via the Supabase JS SDK and return their access token
- * and user id.  With email confirmations disabled (the project default) the
- * session is returned immediately.
- *
- * Retries up to `maxAttempts` times with linear back-off when the Supabase
- * auth endpoint returns a rate-limit error.  Running the full test suite in
- * parallel creates many users in quick succession and can transiently exceed
- * the 30 sign-ups / 5 min / IP limit; the retry keeps the test green without
- * requiring the caller to slow down.
- */
-async function signUpUser(
-  email: string,
-  password: string,
-  maxAttempts = 4,
-): Promise<{ token: string; userId: string }> {
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  let lastError: string | undefined;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const { data, error } = await sb.auth.signUp({ email, password });
-
-    if (!error && data.session) {
-      return { token: data.session.access_token, userId: data.user!.id };
-    }
-
-    lastError = error?.message ?? "no session returned";
-    const isRateLimit =
-      lastError.toLowerCase().includes("rate limit") ||
-      lastError.toLowerCase().includes("too many");
-
-    if (isRateLimit && attempt < maxAttempts) {
-      // Wait 3 s × attempt before retrying (3 s, 6 s, 9 s).
-      await new Promise((r) => setTimeout(r, attempt * 3_000));
-      continue;
-    }
-
-    break;
-  }
-
-  throw new Error(`signUp failed for ${email}: ${lastError}`);
-}
 
 /**
  * INSERT a row into a Supabase table via the PostgREST REST API using the
@@ -163,7 +113,7 @@ test.describe("SECURITY: get_next_quote_number RPC — cross-user data exposure"
     // ── Alice ─────────────────────────────────────────────────────────────────
     // Alice is the victim whose data must stay private.
     ({ token: aliceToken, userId: aliceUserId } =
-      await signUpUser(makeEmail(), password));
+      await signUpUser(makeEmail("sec-rpc"), password));
 
     // user_id is filled by DEFAULT auth.uid() (migration 20260518000000).
     const aliceClient = await restInsert<{ id: string }>(
@@ -194,7 +144,7 @@ test.describe("SECURITY: get_next_quote_number RPC — cross-user data exposure"
     // ── Bob ───────────────────────────────────────────────────────────────────
     // Bob is the attacker: authenticated, but with no rights to Alice's data.
     ({ token: bobToken, userId: bobUserId } =
-      await signUpUser(makeEmail(), password));
+      await signUpUser(makeEmail("sec-rpc"), password));
 
     const bobClient = await restInsert<{ id: string }>(
       bobToken, "clients",
