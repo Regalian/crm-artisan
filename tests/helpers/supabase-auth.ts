@@ -33,7 +33,13 @@ export async function createSession(
       return signUpResult.data.session;
     }
 
-    if (!signUpResult.error) {
+    const signUpErrorMessage = signUpResult.error?.message ?? "";
+    const shouldTrySignIn =
+      !signUpResult.error ||
+      signUpErrorMessage.toLowerCase().includes("already") ||
+      signUpErrorMessage.toLowerCase().includes("registered");
+
+    if (shouldTrySignIn) {
       const signInResult = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -45,7 +51,7 @@ export async function createSession(
 
       lastError = signInResult.error?.message ?? "sign-in did not return a session";
     } else {
-      lastError = signUpResult.error.message;
+      lastError = signUpErrorMessage;
     }
 
     const isRateLimited =

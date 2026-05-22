@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { loadTestEnv } from "./scripts/load-test-env.mjs";
+
+loadTestEnv();
+
 const baseURL = process.env.BASE_URL || "http://127.0.0.1:3001";
 
 export default defineConfig({

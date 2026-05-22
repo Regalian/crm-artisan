@@ -1,6 +1,10 @@
 import { execFileSync, spawn } from "node:child_process";
 import process from "node:process";
 
+import { loadTestEnv } from "./load-test-env.mjs";
+
+loadTestEnv();
+
 function readLocalStatus() {
   try {
     const stdout = execFileSync("supabase", ["status", "-o", "json"], {

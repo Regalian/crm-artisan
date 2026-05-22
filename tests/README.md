@@ -64,6 +64,28 @@ start the Next.js app on a dedicated test port (`127.0.0.1:3001`) so they do
 not reuse an already-running dev server that might still point at the hosted
 database.
 
+The test harness explicitly loads `.env.test.local` before the local Supabase
+wrapper and Playwright config are evaluated.
+
+The cross-user security specs use two dedicated test-only accounts by default:
+
+- `testuser1@example.com`
+- `testuser2@example.com`
+
+Those values now live in `.env.test.local` locally, and you can still override
+them with shell env vars if needed:
+
+```bash
+E2E_USER_1_EMAIL=testuser1@example.com
+E2E_USER_1_PASSWORD=playwright123!
+E2E_USER_2_EMAIL=testuser2@example.com
+E2E_USER_2_PASSWORD=playwright123!
+```
+
+Before each security scenario, the test bootstrap signs these users in (creating
+them if needed) and deletes any tenant data they can see so reruns stay
+repeatable.
+
 Playwright is currently configured with `workers: 1` in `playwright.config.ts`.
 That is intentional: the local Next.js + Supabase test stack is more reliable
 when the browser flows and DB-backed checks run one at a time.

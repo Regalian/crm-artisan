@@ -39,8 +39,8 @@
 
 import { test, expect } from "@playwright/test";
 
-import { SUPABASE_ANON_KEY, SUPABASE_URL, signUpUser } from "./helpers/supabase-auth";
-import { makeEmail } from "./helpers/test-users";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./helpers/supabase-auth";
+import { prepareDedicatedSecurityUsers } from "./helpers/security-test-users";
 
 // ── constants ──────────────────────────────────────────────────────────────────
 const RPC_ENDPOINT = `${SUPABASE_URL}/rest/v1/rpc/get_next_quote_number`;
@@ -108,12 +108,11 @@ test.describe("SECURITY: get_next_quote_number RPC — cross-user data exposure"
   let bobJobSiteId: string;
 
   test.beforeAll(async () => {
-    const password = "securepassword123!";
+    const { alice, bob } = await prepareDedicatedSecurityUsers();
 
     // ── Alice ─────────────────────────────────────────────────────────────────
     // Alice is the victim whose data must stay private.
-    ({ token: aliceToken, userId: aliceUserId } =
-      await signUpUser(makeEmail("sec-rpc"), password));
+    ({ token: aliceToken, userId: aliceUserId } = alice);
 
     // user_id is filled by DEFAULT auth.uid() (migration 20260518000000).
     const aliceClient = await restInsert<{ id: string }>(
@@ -143,8 +142,7 @@ test.describe("SECURITY: get_next_quote_number RPC — cross-user data exposure"
 
     // ── Bob ───────────────────────────────────────────────────────────────────
     // Bob is the attacker: authenticated, but with no rights to Alice's data.
-    ({ token: bobToken, userId: bobUserId } =
-      await signUpUser(makeEmail("sec-rpc"), password));
+    ({ token: bobToken, userId: bobUserId } = bob);
 
     const bobClient = await restInsert<{ id: string }>(
       bobToken, "clients",

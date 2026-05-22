@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-import { SUPABASE_ANON_KEY, SUPABASE_URL, signUpUser } from "./helpers/supabase-auth";
-import { makeEmail } from "./helpers/test-users";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "./helpers/supabase-auth";
+import { prepareDedicatedSecurityUsers } from "./helpers/security-test-users";
 
 async function restInsert<T extends object>(
   token: string,
@@ -70,13 +70,11 @@ type TenantFixture = {
 test.describe("RLS isolation: direct table reads are tenant-scoped", () => {
   test.describe.configure({ mode: "serial" });
 
-  const password = "securepassword123!";
   let alice: TenantFixture;
   let bob: TenantFixture;
 
   test.beforeAll(async () => {
-    const aliceAuth = await signUpUser(makeEmail("rls-alice"), password);
-    const bobAuth = await signUpUser(makeEmail("rls-bob"), password);
+    const { alice: aliceAuth, bob: bobAuth } = await prepareDedicatedSecurityUsers();
 
     const aliceClient = await restInsert<{ id: string }>(aliceAuth.token, "clients", {
       name: "RLS Alice Client",

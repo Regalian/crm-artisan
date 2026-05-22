@@ -1,7 +1,8 @@
 import { test, expect, chromium, Browser, BrowserContext } from "@playwright/test";
 
 import { createAuthenticatedContext } from "./helpers/supabase-auth";
-import { makeUser } from "./helpers/test-users";
+import { SECURITY_USER_A, SECURITY_USER_B } from "./helpers/e2e-users";
+import { prepareDedicatedSecurityUsers } from "./helpers/security-test-users";
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(90_000);
@@ -65,10 +66,19 @@ test.describe("ISSUE 2 & 3: Cross-user API data isolation", () => {
     // Create two isolated authenticated sessions without going through the UI.
     browser = await chromium.launch();
 
-    const alice = makeUser("sec");
-    const bob = makeUser("sec");
-    aliceContext = await createAuthenticatedContext(browser, BASE_URL, alice.email, alice.password);
-    bobContext = await createAuthenticatedContext(browser, BASE_URL, bob.email, bob.password);
+    await prepareDedicatedSecurityUsers();
+    aliceContext = await createAuthenticatedContext(
+      browser,
+      BASE_URL,
+      SECURITY_USER_A.email,
+      SECURITY_USER_A.password,
+    );
+    bobContext = await createAuthenticatedContext(
+      browser,
+      BASE_URL,
+      SECURITY_USER_B.email,
+      SECURITY_USER_B.password,
+    );
 
     // --- Alice creates resources ---
 
@@ -292,10 +302,19 @@ test.describe("ISSUE 6: DELETE client job-site count is user-scoped", () => {
   test.beforeAll(async () => {
     browser = await chromium.launch();
 
-    const alice = makeUser("sec");
-    const bob = makeUser("sec");
-    aliceContext = await createAuthenticatedContext(browser, BASE_URL, alice.email, alice.password);
-    bobContext = await createAuthenticatedContext(browser, BASE_URL, bob.email, bob.password);
+    await prepareDedicatedSecurityUsers();
+    aliceContext = await createAuthenticatedContext(
+      browser,
+      BASE_URL,
+      SECURITY_USER_A.email,
+      SECURITY_USER_A.password,
+    );
+    bobContext = await createAuthenticatedContext(
+      browser,
+      BASE_URL,
+      SECURITY_USER_B.email,
+      SECURITY_USER_B.password,
+    );
 
     // Alice creates client + job site
     const clientRes = await aliceContext.request.post(`${BASE_URL}/api/clients`, {
