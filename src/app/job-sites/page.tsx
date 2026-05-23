@@ -657,10 +657,15 @@ function JobSiteModal({
         />
 
         {/* Modal */}
-        <div className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="job-site-modal-title-mobile"
+          className="relative bg-white dark:bg-zinc-900 rounded-xl shadow-2xl w-full max-w-md mx-auto overflow-hidden max-h-[90vh] overflow-y-auto"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+            <h2 id="job-site-modal-title-mobile" className="text-xl font-semibold text-zinc-900 dark:text-white">
               {isEditMode ? "Edit Job Site" : "Add New Job Site"}
             </h2>
             <button
@@ -719,10 +724,15 @@ function JobSiteModal({
         <div className="flex-1 bg-black/20" onClick={onClose} aria-hidden="true" />
 
         {/* Panel */}
-        <div className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full overflow-y-auto">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="job-site-modal-title-desktop"
+          className="w-full max-w-md bg-white dark:bg-zinc-900 shadow-2xl flex flex-col h-full overflow-y-auto"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-700">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+            <h2 id="job-site-modal-title-desktop" className="text-xl font-semibold text-zinc-900 dark:text-white">
               {isEditMode ? "Edit Job Site" : "Add New Job Site"}
             </h2>
             <button

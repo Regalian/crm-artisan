@@ -94,8 +94,8 @@ test.describe("Login", () => {
     await expect(page.getByRole("heading", { name: /sign in to your account/i })).toBeVisible();
 
     // Now log in
-    await page.locator("#login-email").fill(user.email);
-    await page.locator("#login-password").fill(user.password);
+    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel("Password", { exact: true }).fill(user.password);
     await page.getByRole("button", { name: /sign in/i }).click();
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
@@ -111,8 +111,8 @@ test.describe("Login", () => {
     await page.goto("/login", { waitUntil: "networkidle" });
 
     // Try wrong password
-    await page.locator("#login-email").fill(user.email);
-    await page.locator("#login-password").fill("wrongpassword");
+    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel("Password", { exact: true }).fill("wrongpassword");
     await page.getByRole("button", { name: /sign in/i }).click();
 
     await expect(page.getByText(/invalid login credentials/i)).toBeVisible({ timeout: 10000 });

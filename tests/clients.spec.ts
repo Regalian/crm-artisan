@@ -44,12 +44,14 @@ test.describe("Client Management", () => {
     await clientRow.locator("td").first().click();
     await expect(page.getByRole("heading", { name: /edit client/i })).toBeVisible();
 
+    const editClientDialog = page.getByRole("dialog", { name: /edit client/i });
+
     // Verify pre-filled
-    await expect(page.locator("#phone-desktop")).toHaveValue(TEST_CLIENT.phone);
+    await expect(editClientDialog.getByLabel("Phone")).toHaveValue(TEST_CLIENT.phone);
 
     // Update phone
-    await page.locator("#phone-desktop").fill(UPDATED_PHONE);
-    await page.getByRole("button", { name: /update client/i }).click();
+    await editClientDialog.getByLabel("Phone").fill(UPDATED_PHONE);
+    await editClientDialog.getByRole("button", { name: /update client/i }).click();
 
     // Wait for success
     await expect(page.getByText(/updated successfully/i)).toBeVisible({ timeout: 5000 });

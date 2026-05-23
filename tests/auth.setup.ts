@@ -11,7 +11,7 @@ import { makeUser } from "./helpers/test-users";
 // the browser-based specs can reuse. It intentionally appears as a setup step
 // in Playwright's project dependency graph rather than as a normal app-behavior
 // test case.
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:3001";
 const AUTH_FILE = "tests/auth.json";
 const TEST_USER = makeUser(`pw-test-${process.env.TEST_RUN_ID || Date.now()}`, "playwright123!");
 

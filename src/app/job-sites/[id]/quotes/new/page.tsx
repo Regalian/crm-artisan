@@ -74,10 +74,11 @@ function LineItemRow({
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg border border-zinc-200 dark:border-zinc-700">
       {/* Description */}
       <div className="flex-1 min-w-0 w-full sm:w-auto">
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+        <label htmlFor={`description-${index}`} className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
           Description
         </label>
         <input
+          id={`description-${index}`}
           type="text"
           value={item.description}
           onChange={(e) => onUpdate(index, "description", e.target.value)}
@@ -88,10 +89,11 @@ function LineItemRow({
 
       {/* Quantity */}
       <div className="w-full sm:w-24">
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+        <label htmlFor={`qty-${index}`} className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
           Qty
         </label>
         <input
+          id={`qty-${index}`}
           type="number"
           min="0.01"
           step="1"
@@ -103,10 +105,11 @@ function LineItemRow({
 
       {/* Unit Price */}
       <div className="w-full sm:w-28">
-        <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
+        <label htmlFor={`unit-price-${index}`} className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">
           Unit Price (£)
         </label>
         <input
+          id={`unit-price-${index}`}
           type="number"
           min="0"
           step="0.01"

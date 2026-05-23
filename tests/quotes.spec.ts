@@ -58,17 +58,13 @@ test.describe("Quote Lifecycle", () => {
       await page.getByRole("button", { name: /add item/i }).click();
     }
 
-    // Fill each line item card (ordered by nth position)
-    const cards = page.locator('div.rounded-lg.border:has(label:text("Description"))');
-
+    // Fill each line item using label-based locators in nth order
     for (let i = 0; i < LINE_ITEMS.length; i++) {
-      const card = cards.nth(i);
       const item = LINE_ITEMS[i];
 
-      await card.locator('input[type="text"]').fill(item.description);
-      const numInputs = card.locator('input[type="number"]');
-      await numInputs.nth(0).fill(item.quantity);
-      await numInputs.nth(1).fill(item.unit_price);
+      await page.getByLabel("Description").nth(i).fill(item.description);
+      await page.getByLabel("Qty").nth(i).fill(item.quantity);
+      await page.getByLabel("Unit Price (£)").nth(i).fill(item.unit_price);
     }
 
     // Verify the live total: 10×4.50 + 20×1.25 + 8×45.00 = £430.00
@@ -78,19 +74,21 @@ test.describe("Quote Lifecycle", () => {
     await page.getByRole("button", { name: /save as draft/i }).click();
 
     // Navigate happens after save; wait for the quote detail page
-    await expect(page.locator('h1:has-text("Q-")').first()).toBeVisible({ timeout: 15000 });
+    const quoteHeading = page.getByRole("heading", { level: 1, name: /^Q-\d{3}$/ });
+    await expect(quoteHeading).toBeVisible({ timeout: 15000 });
 
     // Verify quote number format Q-NNN
-    const quoteNumberText = await page.locator('h1:has-text("Q-")').first().textContent();
+    const quoteNumberText = await quoteHeading.textContent();
     expect(quoteNumberText).toMatch(/^Q-\d{3}$/);
 
     // Verify 3 line items in the read-only table
-    await expect(page.locator('tbody tr.border-b')).toHaveCount(3, { timeout: 5000 });
+    const lineItemRows = page.getByRole("row").filter({ has: page.getByRole("cell") });
+    await expect(lineItemRows).toHaveCount(3, { timeout: 5000 });
 
     // Verify the last row's line total and the grand total
-    const lastRow = page.locator('tbody tr.border-b').last();
-    await expect(lastRow.locator('td').last()).toContainText("£360.00");
-    await expect(page.locator('span:has-text("£430.00")').last()).toBeVisible();
+    const lastRow = lineItemRows.last();
+    await expect(lastRow.getByRole("cell").last()).toContainText("£360.00");
+    await expect(page.getByText("£430.00").last()).toBeVisible();
 
     // Verify status badge shows "Draft"
     await expect(page.getByText("Draft")).toBeVisible();

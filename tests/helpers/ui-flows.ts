@@ -24,24 +24,34 @@ export function getTableRowByText(page: Page, primaryText: string, secondaryText
   return row;
 }
 
+function getClientDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: /(?:add new|edit) client/i });
+}
+
+function getJobSiteDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: /(?:add new|edit) job site/i });
+}
+
 export async function createClientViaUi(page: Page, client: ClientFormInput): Promise<Locator> {
   await page.goto("/clients");
   await page.getByRole("button", { name: /add client/i }).click();
-  await expect(page.locator("#name-desktop")).toBeVisible({ timeout: 5000 });
 
-  await page.locator("#name-desktop").fill(client.name);
-  await page.locator("#phone-desktop").fill(client.phone);
-  await page.locator("#email-desktop").fill(client.email);
+  const dialog = getClientDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+
+  await dialog.getByLabel("Name").fill(client.name);
+  await dialog.getByLabel("Phone").fill(client.phone);
+  await dialog.getByLabel("Email").fill(client.email);
 
   if (client.address) {
-    await page.locator("#address-desktop").fill(client.address);
+    await dialog.getByLabel("Address").fill(client.address);
   }
 
   if (client.notes) {
-    await page.locator("#notes-desktop").fill(client.notes);
+    await dialog.getByLabel("Notes").fill(client.notes);
   }
 
-  await page.getByRole("button", { name: /create client/i }).click();
+  await dialog.getByRole("button", { name: /create client/i }).click();
   await expect(page.getByText(/added successfully/i)).toBeVisible({ timeout: 5000 });
 
   const clientRow = getTableRowByText(page, client.name, client.phone);
@@ -52,12 +62,14 @@ export async function createClientViaUi(page: Page, client: ClientFormInput): Pr
 export async function createJobSiteViaUi(page: Page, jobSite: JobSiteFormInput): Promise<Locator> {
   await page.goto("/job-sites");
   await page.getByRole("button", { name: /add job site/i }).click();
-  await expect(page.locator("#title-desktop")).toBeVisible({ timeout: 5000 });
 
-  await page.locator("#client-desktop").selectOption({ label: jobSite.clientName });
-  await page.locator("#title-desktop").fill(jobSite.title);
-  await page.locator("#address-desktop").fill(jobSite.address);
-  await page.getByRole("button", { name: /create job site/i }).click();
+  const dialog = getJobSiteDialog(page);
+  await expect(dialog).toBeVisible({ timeout: 5000 });
+
+  await dialog.getByLabel("Client").selectOption({ label: jobSite.clientName });
+  await dialog.getByLabel("Title").fill(jobSite.title);
+  await dialog.getByLabel("Address").fill(jobSite.address);
+  await dialog.getByRole("button", { name: /create job site/i }).click();
 
   await expect(page.getByText(/added successfully/i)).toBeVisible({ timeout: 5000 });
 
