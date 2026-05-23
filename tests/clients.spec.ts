@@ -21,6 +21,21 @@ test.describe("Client Management", () => {
     await page.goto("/clients");
   });
 
+  test.afterAll(async ({ browser }, testInfo) => {
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      storageState: testInfo.project.use.storageState,
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await deleteClientsMatching(page, "Playwright Client pw-");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("full client lifecycle: create, edit phone, delete", async ({ page }) => {
     const clientRow = await createClientViaUi(page, TEST_CLIENT);
 
@@ -58,7 +73,4 @@ test.describe("Client Management", () => {
     await expect(page.locator("tbody tr").filter({ hasText: TEST_CLIENT.name })).not.toBeVisible();
   });
 
-  test("cleanup: remove test data", async ({ page }) => {
-    await deleteClientsMatching(page, "Playwright Client pw-");
-  });
 });

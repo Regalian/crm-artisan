@@ -20,6 +20,8 @@ export default defineConfig({
   },
   projects: [
     {
+      // Infrastructure-only setup project. It prepares tests/auth.json for
+      // dependent browser projects and is not intended as a product test.
       name: "setup",
       use: {
         ...devices["Desktop Chrome"],

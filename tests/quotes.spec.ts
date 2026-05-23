@@ -21,6 +21,21 @@ test.describe("Quote Lifecycle", () => {
     { description: "Labour - installation", quantity: "8", unit_price: "45.00" },
   ];
 
+  test.afterAll(async ({ browser }, testInfo) => {
+    const context = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL,
+      storageState: testInfo.project.use.storageState,
+    });
+    const page = await context.newPage();
+
+    try {
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await deleteClientsMatching(page, "PW Quote Client pw-");
+    } finally {
+      await context.close();
+    }
+  });
+
   test("full quote lifecycle: create client, job site, quote with line items, send, PDF", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
 
@@ -108,8 +123,4 @@ test.describe("Quote Lifecycle", () => {
     expect(downloadPath).toBeTruthy();
   });
 
-  // --- CLEANUP ---
-  test("cleanup: remove test client and descendants", async ({ page }) => {
-    await deleteClientsMatching(page, "PW Quote Client pw-");
-  });
 });
