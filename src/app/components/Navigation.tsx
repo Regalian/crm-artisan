@@ -93,12 +93,34 @@ export function DesktopSidebar({ user }: { user: User | null }) {
   );
 }
 
+export function MobileAccountBar({ user }: { user: User | null }) {
+  const email = user?.email ?? "Unknown";
+
+  return (
+    <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-black/95 md:hidden">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white">CRM Artisan</p>
+        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">Signed in as {email}</p>
+      </div>
+      <form action={logout}>
+        <button
+          type="submit"
+          className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 pt-2 backdrop-blur dark:border-zinc-800 dark:bg-black/95 md:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-2 pt-2 backdrop-blur dark:border-zinc-800 dark:bg-black/95 md:hidden"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}
       aria-label="Primary"
     >
@@ -111,7 +133,7 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl px-2 text-xs font-medium transition-colors",
+                "pointer-events-auto flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl px-2 text-xs font-medium transition-colors",
                 active
                   ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                   : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800",

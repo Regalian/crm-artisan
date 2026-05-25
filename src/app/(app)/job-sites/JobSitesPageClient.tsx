@@ -546,13 +546,14 @@ export default function JobSitesPageClient({
     () => [...availableClients].sort((a, b) => a.name.localeCompare(b.name)),
     [availableClients],
   );
+  const hasClients = availableClients.length > 0;
 
   return (
     <div className="flex h-full flex-col">
       <div className="space-y-4 p-4 pb-0 md:p-8 md:pb-0">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-white md:text-3xl">Job Sites</h1>
-          <Button onClick={openCreate} leadingIcon={<Plus size={20} />}>
+          <Button onClick={openCreate} leadingIcon={<Plus size={20} />} disabled={!hasClients} title={!hasClients ? "Add a client first" : undefined}>
             <span className="hidden sm:inline">Add Job Site</span>
             <span className="sm:hidden">Add</span>
           </Button>
@@ -586,7 +587,15 @@ export default function JobSitesPageClient({
       </div>
 
       <div className="flex-1 overflow-auto p-4 pt-0 md:p-8 md:pt-0">
-        {jobSites.length === 0 ? (
+        {!hasClients ? (
+          <EmptyState
+            icon={<MapPin className="text-zinc-400" size={48} />}
+            title="Add a client before creating a job site"
+            description="Job sites belong to clients. Add your first client, then you can create job sites and quotes from the road."
+            actionLabel="Add Your First Client"
+            onAction={() => router.push("/clients")}
+          />
+        ) : jobSites.length === 0 ? (
           <EmptyState
             icon={<MapPin className="text-zinc-400" size={48} />}
             title="No job sites yet"

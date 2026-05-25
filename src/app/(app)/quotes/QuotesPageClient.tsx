@@ -178,7 +178,15 @@ function QuoteTable({
   );
 }
 
-export default function QuotesPageClient({ initialQuotes }: { initialQuotes: Quote[] }) {
+export default function QuotesPageClient({
+  initialQuotes,
+  hasClients,
+  hasJobSites,
+}: {
+  initialQuotes: Quote[];
+  hasClients: boolean;
+  hasJobSites: boolean;
+}) {
   const router = useRouter();
   const { success, error } = useToast();
   const [quotes, setQuotes] = useState<Quote[]>(initialQuotes);
@@ -257,11 +265,31 @@ export default function QuotesPageClient({ initialQuotes }: { initialQuotes: Quo
 
       <div className="flex-1 overflow-auto p-4 pt-0 md:p-8 md:pt-0">
         {quotes.length === 0 ? (
-          <EmptyState
-            icon={<FileText className="text-zinc-400" size={48} />}
-            title="No quotes yet"
-            description="Create your first quote from a job site to start tracking estimates and approvals."
-          />
+          !hasClients ? (
+            <EmptyState
+              icon={<FileText className="text-zinc-400" size={48} />}
+              title="Add a client before creating quotes"
+              description="Quotes are created from job sites, and job sites belong to clients. Start by adding your first client."
+              actionLabel="Add Your First Client"
+              onAction={() => router.push("/clients")}
+            />
+          ) : !hasJobSites ? (
+            <EmptyState
+              icon={<FileText className="text-zinc-400" size={48} />}
+              title="Add a job site before creating quotes"
+              description="Quotes are created from job sites. Add your first job site, then build a quote from there."
+              actionLabel="Add Your First Job Site"
+              onAction={() => router.push("/job-sites")}
+            />
+          ) : (
+            <EmptyState
+              icon={<FileText className="text-zinc-400" size={48} />}
+              title="No quotes yet"
+              description="Create your first quote from a job site to start tracking estimates and approvals."
+              actionLabel="Go to Job Sites"
+              onAction={() => router.push("/job-sites")}
+            />
+          )
         ) : filteredQuotes.length === 0 ? (
           <NoResultsState searchTerm={searchQuery} />
         ) : (

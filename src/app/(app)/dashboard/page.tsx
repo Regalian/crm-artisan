@@ -115,7 +115,7 @@ export default async function DashboardPage() {
       </div>
 
       {!hasAnyData ? (
-        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-center dark:border-zinc-700 dark:bg-black">
+        <div className="mb-24 rounded-2xl border border-dashed border-zinc-300 bg-white p-6 text-center dark:border-zinc-700 dark:bg-black md:mb-0">
           <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Your CRM is ready to go</h2>
           <p className="mx-auto mt-2 max-w-lg text-zinc-600 dark:text-zinc-400">
             Start by adding a client, then a job site, then your first quote. Once you do, this dashboard will show live numbers and recent activity automatically.
