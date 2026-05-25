@@ -30,7 +30,7 @@ export async function GET(
   try {
     const { id } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
+    const userId = await getUserId(supabase);
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const hasAccess = await verifyQuoteAccess(supabase, id, userId);

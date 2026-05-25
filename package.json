@@ -11,7 +11,7 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "npm run test:integration:ui && npm run test:integration:db",
     "test:integration:ui": "vitest run tests/integration/signup-form.test.tsx",
-    "test:integration:db": "node ./scripts/with-local-supabase.mjs vitest run tests/integration/clients-crud.test.ts",
+    "test:integration:db": "node ./scripts/with-local-supabase.mjs vitest run tests/integration/clients-crud.test.ts tests/integration/dashboard-foundation.test.ts",
     "test:e2e": "node ./scripts/with-local-supabase.mjs playwright test",
     "test:e2e:browser": "node ./scripts/with-local-supabase.mjs playwright test --project=chromium-no-auth --project=chromium-auth",
     "test:e2e:auth": "node ./scripts/with-local-supabase.mjs playwright test tests/auth.spec.ts --project=chromium-no-auth",

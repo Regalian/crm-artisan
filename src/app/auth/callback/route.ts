@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     // Build the response first so we can attach cookies to it
     const redirectUrl = new URL('/update-password', requestUrl.origin)
-    let supabaseResponse = NextResponse.redirect(redirectUrl)
+    const supabaseResponse = NextResponse.redirect(redirectUrl)
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

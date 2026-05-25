@@ -2,11 +2,17 @@ import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 async function getUserId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string | null | undefined> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.id;
 }
 
-async function verifyQuoteAccess(supabase: Awaited<ReturnType<typeof createClient>>, quoteId: string, userId: string | null | undefined): Promise<boolean> {
+async function verifyQuoteAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  quoteId: string,
+  userId: string | null | undefined,
+): Promise<boolean> {
   const { data: quote } = await supabase
     .from("quotes")
     .select("id, job_site:job_sites(id, client:clients(id, user_id))")
@@ -18,7 +24,10 @@ async function verifyQuoteAccess(supabase: Awaited<ReturnType<typeof createClien
   return clientData?.user_id === userId;
 }
 
-async function isQuoteEditable(supabase: Awaited<ReturnType<typeof createClient>>, quoteId: string): Promise<boolean> {
+async function isQuoteEditable(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  quoteId: string,
+): Promise<boolean> {
   const { data: quote } = await supabase
     .from("quotes")
     .select("status")
@@ -30,30 +39,23 @@ async function isQuoteEditable(supabase: Awaited<ReturnType<typeof createClient>
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
   try {
-    const { id } = await params;
-    const itemId = id;
+    const { id, itemId } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const userId = await getUserId(supabase);
 
-    // Get the quote_id for this item
-    const { data: item, error: fetchError } = await supabase
-      .from("quote_line_items")
-      .select("quote_id")
-      .eq("id", itemId)
-      .single();
-
-    if (fetchError || !item) {
-      return NextResponse.json({ error: "Line item not found" }, { status: 404 });
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const hasAccess = await verifyQuoteAccess(supabase, item.quote_id, userId);
-    if (!hasAccess) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const hasAccess = await verifyQuoteAccess(supabase, id, userId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
-    const isEditable = await isQuoteEditable(supabase, item.quote_id);
+    const isEditable = await isQuoteEditable(supabase, id);
     if (!isEditable) {
       return NextResponse.json({ error: "Cannot edit items on a sent quote. Revert to draft first." }, { status: 403 });
     }
@@ -80,6 +82,7 @@ export async function PUT(
         sort_order: sort_order ?? undefined,
       })
       .eq("id", itemId)
+      .eq("quote_id", id)
       .select()
       .single();
 
@@ -89,38 +92,31 @@ export async function PUT(
     }
 
     return NextResponse.json({ item: updatedItem });
-  } catch (error) {
-    console.error("API error:", error);
+  } catch (routeError) {
+    console.error("API error:", routeError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
   try {
-    const { id } = await params;
-    const itemId = id;
+    const { id, itemId } = await params;
     const supabase = await createClient();
-    let userId = await getUserId(supabase);
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const userId = await getUserId(supabase);
 
-    // Get the quote_id for this item
-    const { data: item, error: fetchError } = await supabase
-      .from("quote_line_items")
-      .select("quote_id")
-      .eq("id", itemId)
-      .single();
-
-    if (fetchError || !item) {
-      return NextResponse.json({ error: "Line item not found" }, { status: 404 });
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const hasAccess = await verifyQuoteAccess(supabase, item.quote_id, userId);
-    if (!hasAccess) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const hasAccess = await verifyQuoteAccess(supabase, id, userId);
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
-    const isEditable = await isQuoteEditable(supabase, item.quote_id);
+    const isEditable = await isQuoteEditable(supabase, id);
     if (!isEditable) {
       return NextResponse.json({ error: "Cannot delete items from a sent quote. Revert to draft first." }, { status: 403 });
     }
@@ -128,7 +124,8 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from("quote_line_items")
       .delete()
-      .eq("id", itemId);
+      .eq("id", itemId)
+      .eq("quote_id", id);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);
@@ -136,8 +133,8 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("API error:", error);
+  } catch (routeError) {
+    console.error("API error:", routeError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
-import { formatCurrency } from "@/lib/quotes";
 
 // Register default fonts (Helvetica is built-in to @react-pdf/renderer)
 Font.register({
@@ -244,10 +243,6 @@ export function QuotePdfDocument({ quote, total }: QuotePdfProps) {
       })
     : "—";
 
-  const grandTotal = quote.line_items.reduce(
-    (sum, item) => sum + item.quantity * item.unit_price,
-    0
-  );
 
   return (
     <Document
@@ -340,7 +335,7 @@ export function QuotePdfDocument({ quote, total }: QuotePdfProps) {
           {/* Total */}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatGBP(grandTotal)}</Text>
+            <Text style={styles.totalValue}>{formatGBP(total)}</Text>
           </View>
 
           {/* Notes */}

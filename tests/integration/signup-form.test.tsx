@@ -6,7 +6,7 @@ vi.mock("@/app/actions/auth", () => ({
   signup: vi.fn(),
 }));
 
-import SignupForm from "@/app/signup/SignupForm";
+import SignupForm from "@/app/(auth)/signup/SignupForm";
 
 describe("SignupForm", () => {
   it("shows a helpful error and blocks submit when passwords do not match", async () => {
