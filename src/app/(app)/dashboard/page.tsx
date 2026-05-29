@@ -32,7 +32,7 @@ export default async function DashboardPage({
   ]);
 
   const showUpgradeButton = isFreePlan(billing);
-  const showUpgradeSuccess = resolvedSearchParams.upgraded === "true";
+  const showUpgradeSuccess = resolvedSearchParams.upgraded === "true" && !showUpgradeButton;
   const showBillingError = resolvedSearchParams.billingError === "true";
 
   const hasAnyData =

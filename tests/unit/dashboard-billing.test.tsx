@@ -62,12 +62,20 @@ describe("Dashboard billing", () => {
     expect(screen.getByRole("button", { name: /upgrade to premium/i })).toBeInTheDocument();
   });
 
-  it("shows the welcome message after a successful checkout redirect", async () => {
-    arrangeBilling("free");
+  it("shows the welcome message after a successful checkout redirect once billing is premium", async () => {
+    arrangeBilling("premium");
 
     render(await DashboardPage({ searchParams: Promise.resolve({ upgraded: "true" }) }));
 
     expect(screen.getByText("Welcome to Premium!")).toBeInTheDocument();
+  });
+
+  it("does not keep showing the welcome message after billing has returned to free", async () => {
+    arrangeBilling("free");
+
+    render(await DashboardPage({ searchParams: Promise.resolve({ upgraded: "true" }) }));
+
+    expect(screen.queryByText("Welcome to Premium!")).not.toBeInTheDocument();
   });
 
   it("hides the upgrade button for premium users", async () => {
