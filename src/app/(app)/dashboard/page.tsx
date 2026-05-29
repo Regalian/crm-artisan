@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   CircleDollarSign,
+  Crown,
   FileText,
   MapPin,
   Users,
 } from "lucide-react";
 
 import { formatCurrency } from "@/lib/quotes";
+import { getCurrentAccountBilling, isFreePlan } from "@/lib/server/billing";
 import { getDashboardSummary, getRecentActivity } from "@/lib/server/dashboard";
 import { MetricCard } from "./_components/MetricCard";
 import { QuoteStatusBreakdown } from "./_components/QuoteStatusBreakdown";
@@ -17,11 +19,21 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-export default async function DashboardPage() {
-  const [summary, recentActivity] = await Promise.all([
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ upgraded?: string; billingError?: string }>;
+}) {
+  const [summary, recentActivity, billing, resolvedSearchParams] = await Promise.all([
     getDashboardSummary(),
     getRecentActivity(5),
+    getCurrentAccountBilling(),
+    searchParams ?? Promise.resolve({}),
   ]);
+
+  const showUpgradeButton = isFreePlan(billing);
+  const showUpgradeSuccess = resolvedSearchParams.upgraded === "true";
+  const showBillingError = resolvedSearchParams.billingError === "true";
 
   const hasAnyData =
     summary.clientsCount > 0 ||
@@ -33,6 +45,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-8">
+      {showUpgradeSuccess ? (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 dark:border-green-800 dark:bg-green-950/40 dark:text-green-300">
+          Welcome to Premium!
+        </div>
+      ) : null}
+
+      {showBillingError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
+          Could not start checkout. Please try again.
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
@@ -67,6 +91,17 @@ export default async function DashboardPage() {
               Add Job Site
             </span>
           )}
+          {showUpgradeButton ? (
+            <form action="/api/stripe/checkout" method="POST">
+              <button
+                type="submit"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-900 transition-colors hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-900/40"
+              >
+                <Crown size={16} />
+                <span>Upgrade to Premium</span>
+              </button>
+            </form>
+          ) : null}
         </div>
       </div>
 
