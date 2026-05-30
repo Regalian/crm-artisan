@@ -1,5 +1,10 @@
 import { isValidJobSiteStatus, type JobSiteStatus } from "@/lib/job-site-status";
 import {
+  isJobSiteLimitErrorMessage,
+  JOB_SITE_LIMIT_ERROR_CODE,
+  JOB_SITE_LIMIT_MESSAGE,
+} from "@/lib/job-site-limits";
+import {
   getJobSiteValidationError,
   normalizeJobSiteInput,
 } from "@/lib/job-site-validation";
@@ -117,6 +122,17 @@ export async function PUT(
 
     if (error) {
       console.error("Update error:", error);
+
+      if (isJobSiteLimitErrorMessage(error.message)) {
+        return NextResponse.json(
+          {
+            error: JOB_SITE_LIMIT_MESSAGE,
+            code: JOB_SITE_LIMIT_ERROR_CODE,
+          },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json({ error: "Failed to update job site" }, { status: 500 });
     }
 

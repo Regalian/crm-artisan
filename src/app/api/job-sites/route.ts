@@ -2,6 +2,11 @@ import {
   getJobSiteValidationError,
   normalizeJobSiteInput,
 } from "@/lib/job-site-validation";
+import {
+  isJobSiteLimitErrorMessage,
+  JOB_SITE_LIMIT_ERROR_CODE,
+  JOB_SITE_LIMIT_MESSAGE,
+} from "@/lib/job-site-limits";
 import { createClient } from "@/utils/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -93,6 +98,17 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error("Database error:", insertError);
+
+      if (isJobSiteLimitErrorMessage(insertError.message)) {
+        return NextResponse.json(
+          {
+            error: JOB_SITE_LIMIT_MESSAGE,
+            code: JOB_SITE_LIMIT_ERROR_CODE,
+          },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json({ error: "Failed to create job site" }, { status: 500 });
     }
 

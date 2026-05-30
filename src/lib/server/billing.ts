@@ -1,14 +1,13 @@
+import "server-only";
+
+import {
+  type BillingAccessSnapshot,
+  hasUnlimitedJobSitesAccess,
+  isFreePlan,
+} from "@/lib/billing-access";
 import { requireAuthenticatedUser } from "@/lib/server/auth";
 
-export type AccountBilling = {
-  userId: string;
-  planTier: "free" | "premium";
-  accessState: "free" | "premium_active" | "premium_canceling" | "payment_retrying" | "past_due";
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  stripePriceId: string | null;
-  cancelAtPeriodEnd: boolean;
-};
+export type AccountBilling = BillingAccessSnapshot;
 
 function toAccountBilling(userId: string, data?: {
   plan_tier?: string | null;
@@ -51,6 +50,4 @@ export async function getCurrentAccountBilling(): Promise<AccountBilling> {
   return toAccountBilling(user.id, data);
 }
 
-export function isFreePlan(billing: AccountBilling) {
-  return billing.planTier === "free";
-}
+export { hasUnlimitedJobSitesAccess, isFreePlan };

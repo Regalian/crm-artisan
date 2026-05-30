@@ -1,4 +1,5 @@
 import {
+  canTransitionJobSiteStatus,
   getInvalidJobSiteStatusTransitionError,
   isValidJobSiteStatus,
   type JobSiteStatus,
@@ -72,7 +73,12 @@ export function validateJobSiteInput(
     return errors;
   }
 
-  if (options.currentStatus && hasStatus && rawStatus !== options.currentStatus) {
+  if (
+    options.currentStatus &&
+    hasStatus &&
+    rawStatus !== options.currentStatus &&
+    !canTransitionJobSiteStatus(options.currentStatus, rawStatus)
+  ) {
     errors.status = getInvalidJobSiteStatusTransitionError(
       options.currentStatus,
       rawStatus,

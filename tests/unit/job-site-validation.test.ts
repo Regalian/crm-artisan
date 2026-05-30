@@ -28,6 +28,20 @@ describe("job site validation", () => {
     ).toEqual({ dates: "Start date must be before end date" });
   });
 
+  it("allows valid job site status transitions", () => {
+    expect(
+      validateJobSiteInput(
+        {
+          client_id: "client-1",
+          title: "Kitchen refit",
+          address: "1 High Street",
+          status: "in_progress",
+        },
+        { currentStatus: "planned", transitionErrorFormat: "label" },
+      ),
+    ).toEqual({});
+  });
+
   it("returns a label-based status transition error for the UI", () => {
     expect(
       validateJobSiteInput(

@@ -6,12 +6,15 @@ import {
   AlertCircle,
   Calendar,
   ClipboardList,
+  Crown,
   MapPin,
   Plus,
   Search,
   Trash2,
 } from "lucide-react";
 
+import type { BillingAccessSnapshot } from "@/lib/billing-access";
+import { hasUnlimitedJobSitesAccess } from "@/lib/billing-access";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,6 +25,12 @@ import {
   JOB_SITE_STATUS_LABELS,
   type JobSiteStatus,
 } from "@/lib/job-site-status";
+import {
+  countActiveJobSites,
+  FREE_ACTIVE_JOB_SITE_LIMIT,
+  JOB_SITE_LIMIT_ERROR_CODE,
+  JOB_SITE_LIMIT_MESSAGE,
+} from "@/lib/job-site-limits";
 import {
   validateJobSiteInput,
   type JobSiteValidationErrors,
@@ -44,6 +53,12 @@ type JobSite = {
   created_at: string;
   updated_at: string;
   client: Client;
+};
+
+type JobSiteApiResponse = {
+  error?: string;
+  code?: string;
+  job_site?: JobSite;
 };
 
 const statusConfig: Record<JobSiteStatus, { label: string; bg: string; text: string }> = {
@@ -245,11 +260,13 @@ function JobSiteForm({
   clients,
   onClose,
   onSuccess,
+  onLimitReached,
 }: {
   jobSite: JobSite | null;
   clients: Client[];
   onClose: () => void;
   onSuccess: (jobSite: JobSite, isNew: boolean) => void;
+  onLimitReached: () => void;
 }) {
   const isEditMode = Boolean(jobSite);
   const { error } = useToast();
@@ -321,9 +338,23 @@ function JobSiteForm({
           notes: formData.notes.trim() || null,
         }),
       });
-      const data = await response.json();
+      const data = await response.json() as JobSiteApiResponse;
 
       if (!response.ok) {
+        if (data.code === JOB_SITE_LIMIT_ERROR_CODE) {
+          if (!isEditMode) {
+            onClose();
+            onLimitReached();
+            return;
+          }
+
+          setFieldErrors((current) => ({
+            ...current,
+            general: data.error ?? JOB_SITE_LIMIT_MESSAGE,
+          }));
+          return;
+        }
+
         throw new Error(data.error || (isEditMode ? "Failed to update job site" : "Failed to create job site"));
       }
 
@@ -469,12 +500,60 @@ function JobSiteForm({
   );
 }
 
+function UpgradeToPremiumDialog({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upgrade-job-site-limit-title"
+        className="relative w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 rounded-full bg-amber-100 p-4 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+            <Crown size={30} />
+          </div>
+          <h2 id="upgrade-job-site-limit-title" className="mb-2 text-xl font-semibold text-zinc-900 dark:text-white">
+            You&apos;ve hit the free tier limit
+          </h2>
+          <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
+            Upgrade to Premium for unlimited job sites.
+          </p>
+          <div className="flex w-full gap-3">
+            <Button variant="secondary" fullWidth onClick={onClose}>
+              Maybe Later
+            </Button>
+            <form action="/api/stripe/checkout" method="POST" className="w-full">
+              <Button type="submit" fullWidth className="cursor-pointer" leadingIcon={<Crown size={16} />}>
+                Upgrade
+              </Button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function JobSitesPageClient({
   initialJobSites,
   availableClients,
+  initialBilling,
 }: {
   initialJobSites: JobSite[];
   availableClients: Client[];
+  initialBilling: BillingAccessSnapshot;
 }) {
   const router = useRouter();
   const { success, error } = useToast();
@@ -482,6 +561,7 @@ export default function JobSitesPageClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [editingJobSite, setEditingJobSite] = useState<JobSite | null>(null);
   const [deletingJobSite, setDeletingJobSite] = useState<JobSite | null>(null);
 
@@ -499,7 +579,16 @@ export default function JobSitesPageClient({
     });
   }, [jobSites, searchQuery, statusFilter]);
 
+  const activeJobSitesCount = useMemo(() => countActiveJobSites(jobSites), [jobSites]);
+  const hasUnlimitedJobSites = hasUnlimitedJobSitesAccess(initialBilling);
+  const hasReachedFreeTierLimit = !hasUnlimitedJobSites && activeJobSitesCount >= FREE_ACTIVE_JOB_SITE_LIMIT;
+
   const openCreate = () => {
+    if (hasReachedFreeTierLimit) {
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     setEditingJobSite(null);
     setIsModalOpen(true);
   };
@@ -638,8 +727,13 @@ export default function JobSitesPageClient({
             setEditingJobSite(null);
           }}
           onSuccess={handleSaved}
+          onLimitReached={() => {
+            setIsUpgradeModalOpen(true);
+          }}
         />
       ) : null}
+
+      <UpgradeToPremiumDialog isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} />
 
       <ConfirmDialog
         isOpen={Boolean(deletingJobSite)}

@@ -214,3 +214,307 @@ Minimum local manual sign-off:
 Additional confidence:
 - review webhook ledger rows in `public.stripe_webhook_events`
 - run Test 5 when you are ready to test dunning behavior more deeply
+
+---
+
+# Step 4 Manual Checklist — 5 Job-Site Wall
+
+Relevant files:
+- `src/app/(app)/job-sites/JobSitesPageClient.tsx`
+- `src/app/api/job-sites/route.ts`
+- `src/app/api/job-sites/[id]/route.ts`
+- `supabase/migrations/20260530100110_enforce_free_job_site_limit.sql`
+
+## Preconditions
+
+- Step 3 is working
+- you have one free account and one premium account available for testing
+- app running locally
+- Supabase local/linked DB migrated with the job-site limit trigger
+
+## Handy SQL checks
+
+Replace `artisan@example.com` with the test user email.
+
+### 1) Count active job sites
+
+```sql
+select
+  u.email,
+  count(*) filter (where js.status in ('planned', 'in_progress')) as active_job_sites,
+  count(*) filter (where js.status = 'completed') as completed_job_sites,
+  count(*) as total_job_sites
+from auth.users u
+join public.clients c on c.user_id = u.id
+join public.job_sites js on js.client_id = c.id
+where u.email = 'artisan@example.com'
+group by u.email;
+```
+
+### 2) Show billing + job-site summary together
+
+```sql
+select
+  u.email,
+  ab.plan_tier,
+  ab.access_state,
+  count(*) filter (where js.status in ('planned', 'in_progress')) as active_job_sites,
+  count(*) filter (where js.status = 'completed') as completed_job_sites,
+  count(js.id) as total_job_sites
+from auth.users u
+left join public.account_billing ab on ab.user_id = u.id
+left join public.clients c on c.user_id = u.id
+left join public.job_sites js on js.client_id = c.id
+where u.email = 'artisan@example.com'
+group by u.email, ab.plan_tier, ab.access_state;
+```
+
+### 3) List job sites and statuses
+
+```sql
+select
+  js.id,
+  js.title,
+  js.status,
+  js.created_at
+from auth.users u
+join public.clients c on c.user_id = u.id
+join public.job_sites js on js.client_id = c.id
+where u.email = 'artisan@example.com'
+order by js.created_at asc;
+```
+
+---
+
+## Test 1 — Free user can create up to 5 active job sites
+
+### Action
+
+1. Sign in as a free user.
+2. Make sure the account has a client available.
+3. Create job sites with status `planned` or `in_progress` until there are 5 active job sites.
+
+### Expected
+
+- job sites 1 through 5 are created successfully
+- no upgrade modal appears before the 6th attempt
+- SQL shows:
+  - `active_job_sites = 5`
+  - `plan_tier = 'free'`
+
+---
+
+## Test 2 — Free user hits the wall on the 6th active job site
+
+### Action
+
+1. While still on the free account with 5 active job sites, click **Add Job Site**.
+
+### Expected in browser
+
+- creation form does **not** open
+- modal appears with:
+  - `You've hit the free tier limit`
+  - `Upgrade to Premium for unlimited job sites.`
+- modal has an **Upgrade** button
+- clicking **Upgrade** goes straight to Stripe Checkout
+
+### Expected in database
+
+- no 6th active job site is created
+- SQL still shows:
+  - `active_job_sites = 5`
+
+---
+
+## Test 3 — Premium user has no limit
+
+### Action
+
+1. Sign in as a premium user.
+2. Create 6 or more active job sites.
+
+### Expected
+
+- no upgrade modal appears
+- job sites keep being created normally
+- SQL shows:
+  - `plan_tier = 'premium'`
+  - `access_state` is one of the premium-access states
+  - `active_job_sites >= 6`
+
+---
+
+## Test 4 — Downgrade does not delete existing job sites
+
+### Action
+
+1. Start from a premium user with at least 6 active job sites.
+2. Cancel/downgrade back to free.
+3. Refresh `/job-sites`.
+
+### Expected
+
+- all existing job sites are still present
+- nothing is deleted automatically
+- the **Upgrade to Premium** path is back for the user when they try to add more
+- SQL shows:
+  - `plan_tier = 'free'`
+  - `active_job_sites >= 6`
+  - existing rows remain intact
+
+---
+
+## Test 5 — Downgraded free user is blocked from creating more active job sites
+
+### Action
+
+1. Using that downgraded free user with 6+ active job sites, click **Add Job Site**.
+
+### Expected
+
+- upgrade modal appears immediately
+- no new job site is created
+- SQL active count does not change
+
+---
+
+## Test 6 — User must get back under 5 active, not merely down to 5
+
+### Action
+
+1. Start from free with 6 active job sites.
+2. Mark **one** active job site as `completed`.
+3. Try to create a new active job site.
+
+### Expected
+
+- still blocked
+- because the user is at exactly 5 active job sites
+- upgrade modal appears
+- no new row is created
+
+### Continue
+
+4. Mark a **second** active job site as `completed`.
+5. Try again to create a new active job site.
+
+### Expected
+
+- now allowed
+- because the user is back under 5 before creating the new one
+- after creation, active count returns to 5
+
+---
+
+## Test 7 — Free user cannot reactivate a completed job site if already at the cap
+
+### Action
+
+1. Use a free account with 5 active job sites and 1 completed job site.
+2. Edit the completed job site.
+3. Change its status from `completed` to `planned`.
+4. Save.
+
+### Expected
+
+- save is blocked
+- user sees the free-tier limit message
+- completed site stays completed
+- SQL active count remains 5
+
+---
+
+## Test 8 — Existing active job sites remain editable
+
+### Action
+
+1. Use a free account already at the cap.
+2. Edit an existing active job site.
+3. Change title, address, notes, or dates without increasing active count.
+4. Save.
+
+### Expected
+
+- edit succeeds
+- this confirms the wall blocks only capacity increases, not normal edits
+
+---
+
+## Optional hardening check — DB-level protection, not just UI
+
+This verifies the server/database rule is real.
+
+### Pre-check SQL
+
+```sql
+select
+  u.email,
+  ab.plan_tier,
+  ab.access_state,
+  count(*) filter (where js.status in ('planned', 'in_progress')) as active_job_sites
+from auth.users u
+left join public.account_billing ab on ab.user_id = u.id
+left join public.clients c on c.user_id = u.id
+left join public.job_sites js on js.client_id = c.id
+where u.email = 'artisan@example.com'
+group by u.email, ab.plan_tier, ab.access_state;
+```
+
+### Action
+
+Run this in the Supabase SQL editor, replacing the email first:
+
+```sql
+begin;
+
+with target_user as (
+  select
+    u.id as user_id,
+    c.id as client_id
+  from auth.users u
+  join public.clients c on c.user_id = u.id
+  where u.email = 'artisan@example.com'
+  order by c.created_at asc
+  limit 1
+)
+insert into public.job_sites (
+  client_id,
+  title,
+  address,
+  status
+)
+select
+  client_id,
+  'DB Hardening Check',
+  '123 Test Lane',
+  'planned'
+from target_user;
+
+rollback;
+```
+
+### Expected
+
+- insert is rejected
+- error message includes:
+  - `You've hit the free tier limit. Upgrade to Premium for unlimited job sites.`
+
+This confirms the wall is enforced below the UI layer.
+
+---
+
+## Pass criteria for Step 4
+
+Minimum acceptance:
+- Test 1 passes
+- Test 2 passes
+- Test 3 passes
+- Test 4 passes
+- Test 5 passes
+- Test 6 passes
+- Test 7 passes
+
+High-confidence sign-off:
+- Test 8 passes
+- optional DB-level protection check passes
