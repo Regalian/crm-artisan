@@ -504,6 +504,166 @@ This confirms the wall is enforced below the UI layer.
 
 ---
 
+# Step 5 Manual Checklist — Billing Page and Customer Portal
+
+Relevant files:
+- `src/app/components/Navigation.tsx`
+- `src/app/(app)/billing/page.tsx`
+- `src/app/api/stripe/portal/route.ts`
+- `src/app/api/webhooks/stripe/route.ts`
+
+## Preconditions
+
+- Stripe Customer Portal enabled in test mode
+- `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` set in `.env.local`
+- Stripe webhook forwarding still running if you want live state changes reflected immediately
+- at least one free user and one premium user available
+
+## Test 1 — Clicking the email opens billing
+
+### Desktop
+- Click the signed-in email area in the left sidebar.
+
+### Mobile
+- Tap the signed-in identity area in the top account bar.
+
+### Expected
+- navigates to `/billing`
+- Sign Out remains separate and still works
+
+---
+
+## Test 2 — Free user billing page
+
+### Action
+- Open `/billing` as a free user.
+
+### Expected
+- page title is `Billing`
+- current plan shows `Free`
+- page mentions the 5 active job site limit
+- **Upgrade to Premium** button is visible
+- **Manage subscription** button is not shown
+
+---
+
+## Test 3 — Premium active billing page
+
+### Action
+- Open `/billing` as a premium active user.
+
+### Expected
+- current plan shows `Premium`
+- page shows Premium active messaging
+- current billing period dates are shown when available
+- **Manage subscription** button is visible
+
+---
+
+## Test 4 — Manage subscription opens Stripe Customer Portal
+
+### Action
+- From `/billing`, click **Manage subscription**.
+
+### Expected
+- redirects to Stripe Customer Portal
+- portal loads the current customer
+- portal shows payment method management and subscription controls
+- the portal return link comes back to `/billing`
+
+---
+
+## Test 5 — Cancel at period end from portal
+
+### Action
+1. Open Stripe Customer Portal from `/billing`.
+2. Cancel the subscription using the portal.
+3. Return to the app and refresh `/billing` if needed.
+
+### Expected
+- webhook receives `customer.subscription.updated`
+- `public.account_billing` updates to:
+  - `plan_tier = 'premium'`
+  - `access_state = 'premium_canceling'`
+  - `cancel_at_period_end = true`
+- `/billing` shows canceling language
+- `/dashboard` and `/job-sites` still behave as Premium until the period ends
+
+---
+
+## Test 6 — Resume from portal before period end
+
+### Action
+1. Start from a `premium_canceling` account.
+2. Open Stripe Customer Portal again.
+3. Resume/reactivate the subscription.
+4. Return to the app and refresh `/billing`.
+
+### Expected
+- webhook receives `customer.subscription.updated`
+- `public.account_billing` updates back to:
+  - `plan_tier = 'premium'`
+  - `access_state = 'premium_active'`
+  - `cancel_at_period_end = false`
+- `/billing` no longer shows canceling language
+
+---
+
+## Test 7 — Payment failure shows retrying state, not immediate full loss of access
+
+### Action
+Trigger a realistic recurring payment failure on an existing premium subscription.
+
+### Expected
+- webhook receives `invoice.payment_failed`
+- `public.account_billing` updates to:
+  - `plan_tier = 'premium'`
+  - `access_state = 'payment_retrying'`
+- `/billing` shows warning text telling the user to update card details
+- **Manage subscription** remains available
+- job-site Premium access remains allowed while retrying
+
+---
+
+## Test 8 — Final subscription deletion returns the account to free
+
+### Action
+- Let the subscription end fully or trigger `customer.subscription.deleted`.
+
+### Expected
+- `public.account_billing` updates to:
+  - `plan_tier = 'free'`
+  - `access_state = 'free'`
+- `/billing` returns to free-plan UI
+- **Upgrade to Premium** is visible
+- **Manage subscription** is hidden
+
+---
+
+## Helpful SQL check
+
+```sql
+select
+  u.email,
+  ab.plan_tier,
+  ab.access_state,
+  ab.stripe_customer_id,
+  ab.stripe_subscription_id,
+  ab.stripe_subscription_status,
+  ab.cancel_at_period_end,
+  ab.current_period_start,
+  ab.current_period_end,
+  ab.last_invoice_id,
+  ab.last_invoice_status,
+  ab.last_payment_failed_at,
+  ab.updated_at
+from auth.users u
+left join public.account_billing ab on ab.user_id = u.id
+where u.email = 'artisan@example.com';
+```
+
+---
+
 ## Pass criteria for Step 4
 
 Minimum acceptance:

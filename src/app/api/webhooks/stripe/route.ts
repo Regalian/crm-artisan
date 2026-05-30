@@ -33,6 +33,18 @@ function toIsoFromUnixTimestamp(value: number | null | undefined) {
   return new Date(value * 1000).toISOString();
 }
 
+function getSubscriptionEffectivePeriodStart(subscription: Stripe.Subscription) {
+  return toIsoFromUnixTimestamp(
+    subscription.current_period_start ?? subscription.items.data[0]?.current_period_start ?? null,
+  );
+}
+
+function getSubscriptionEffectivePeriodEnd(subscription: Stripe.Subscription) {
+  return toIsoFromUnixTimestamp(
+    subscription.cancel_at ?? subscription.current_period_end ?? subscription.items.data[0]?.current_period_end ?? null,
+  );
+}
+
 function getStripeId(value: string | Stripe.Response<object> | Stripe.DeletedCustomer | Stripe.Invoice | Stripe.Subscription | null | undefined) {
   if (!value) {
     return null;
@@ -55,6 +67,47 @@ function isDuplicateInsertError(error: { code?: string | null; message?: string 
   }
 
   return error.code === "23505" || error.message?.toLowerCase().includes("duplicate key") === true;
+}
+
+function hasScheduledCancellation(subscription: Stripe.Subscription) {
+  return Boolean(subscription.cancel_at_period_end || subscription.cancel_at);
+}
+
+function getRecurringPremiumAccessState(subscription: Stripe.Subscription): AccessState {
+  return hasScheduledCancellation(subscription) ? "premium_canceling" : "premium_active";
+}
+
+function getSubscriptionUpdatedState(subscription: Stripe.Subscription): { planTier: PlanTier; accessState: AccessState } {
+  switch (subscription.status) {
+    case "active":
+    case "trialing":
+      return {
+        planTier: "premium",
+        accessState: getRecurringPremiumAccessState(subscription),
+      };
+    case "past_due":
+      return {
+        planTier: "premium",
+        accessState: "payment_retrying",
+      };
+    case "unpaid":
+      return {
+        planTier: "premium",
+        accessState: "past_due",
+      };
+    case "canceled":
+    case "incomplete":
+    case "incomplete_expired":
+      return {
+        planTier: "free",
+        accessState: "free",
+      };
+    default:
+      return {
+        planTier: "premium",
+        accessState: getRecurringPremiumAccessState(subscription),
+      };
+  }
 }
 
 async function rememberEvent(event: Stripe.Event) {
@@ -160,14 +213,14 @@ function buildSubscriptionBillingUpdate(
   return {
     userId,
     planTier: overrides?.planTier ?? "premium",
-    accessState: overrides?.accessState ?? "premium_active",
+    accessState: overrides?.accessState ?? getRecurringPremiumAccessState(subscription),
     stripeCustomerId: overrides?.stripeCustomerId ?? getStripeId(subscription.customer),
     stripeSubscriptionId: overrides?.stripeSubscriptionId ?? subscription.id,
     stripePriceId: overrides?.stripePriceId ?? subscription.items.data[0]?.price?.id ?? null,
     stripeSubscriptionStatus: overrides?.stripeSubscriptionStatus ?? subscription.status,
-    cancelAtPeriodEnd: overrides?.cancelAtPeriodEnd ?? subscription.cancel_at_period_end,
-    currentPeriodStart: overrides?.currentPeriodStart ?? toIsoFromUnixTimestamp(subscription.current_period_start),
-    currentPeriodEnd: overrides?.currentPeriodEnd ?? toIsoFromUnixTimestamp(subscription.current_period_end),
+    cancelAtPeriodEnd: overrides?.cancelAtPeriodEnd ?? hasScheduledCancellation(subscription),
+    currentPeriodStart: overrides?.currentPeriodStart ?? getSubscriptionEffectivePeriodStart(subscription),
+    currentPeriodEnd: overrides?.currentPeriodEnd ?? getSubscriptionEffectivePeriodEnd(subscription),
     lastInvoiceId: overrides?.lastInvoiceId ?? getStripeId(subscription.latest_invoice),
     lastInvoiceStatus: overrides?.lastInvoiceStatus ?? null,
     lastPaymentFailedAt: overrides?.lastPaymentFailedAt ?? null,
@@ -204,7 +257,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
   await upsertBilling(buildSubscriptionBillingUpdate(userId, subscription, {
     planTier: "premium",
-    accessState: "premium_active",
+    accessState: getRecurringPremiumAccessState(subscription),
     stripeCustomerId: customerId ?? getStripeId(subscription.customer),
     lastInvoiceStatus: "paid",
     lastPaymentFailedAt: null,
@@ -233,7 +286,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   await upsertBilling(buildSubscriptionBillingUpdate(userId, subscription, {
     planTier: "premium",
-    accessState: "premium_active",
+    accessState: getRecurringPremiumAccessState(subscription),
     stripeCustomerId: customerId ?? getStripeId(subscription.customer),
     lastInvoiceId: invoice.id,
     lastInvoiceStatus: invoice.status ?? "paid",
@@ -263,12 +316,35 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   await upsertBilling(buildSubscriptionBillingUpdate(userId, subscription, {
     planTier: "premium",
-    accessState: "past_due",
+    accessState: "payment_retrying",
     stripeCustomerId: customerId ?? getStripeId(subscription.customer),
     stripeSubscriptionStatus: subscription.status || "past_due",
     lastInvoiceId: invoice.id,
     lastInvoiceStatus: invoice.status ?? "open",
     lastPaymentFailedAt: toIsoFromUnixTimestamp(invoice.created),
+  }));
+}
+
+async function handleCustomerSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const customerId = getStripeId(subscription.customer);
+  const userId =
+    subscription.metadata.supabase_user_id ??
+    await resolveUserIdFromBilling({
+      stripeSubscriptionId: subscription.id,
+      stripeCustomerId: customerId,
+    });
+
+  if (!userId) {
+    throw new Error("Webhook customer.subscription.updated missing user reference");
+  }
+
+  const nextState = getSubscriptionUpdatedState(subscription);
+
+  await upsertBilling(buildSubscriptionBillingUpdate(userId, subscription, {
+    planTier: nextState.planTier,
+    accessState: nextState.accessState,
+    stripeCustomerId: customerId,
+    cancelAtPeriodEnd: hasScheduledCancellation(subscription),
   }));
 }
 
@@ -305,6 +381,9 @@ async function handleStripeEvent(event: Stripe.Event) {
       break;
     case "invoice.payment_failed":
       await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+      break;
+    case "customer.subscription.updated":
+      await handleCustomerSubscriptionUpdated(event.data.object as Stripe.Subscription);
       break;
     case "customer.subscription.deleted":
       await handleCustomerSubscriptionDeleted(event.data.object as Stripe.Subscription);

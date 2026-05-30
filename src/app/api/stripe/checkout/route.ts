@@ -1,31 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { getSiteUrlFromRequest } from "@/lib/stripe/site-url";
 import { getStripe } from "@/lib/stripe/server";
 import { createClient } from "@/utils/supabase/server";
-
-function getSiteUrl(request: Request) {
-  const requestUrl = new URL(request.url);
-  const requestHeaders = new Headers(request.headers);
-  const forwardedHost = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const forwardedProto = requestHeaders.get("x-forwarded-proto") ?? requestUrl.protocol.replace(":", "");
-  const originHeader = requestHeaders.get("origin");
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`.replace(/\/+$/, "");
-  }
-
-  if (originHeader) {
-    return originHeader.replace(/\/+$/, "");
-  }
-
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (configured) {
-    return configured.replace(/\/+$/, "");
-  }
-
-  return requestUrl.origin;
-}
 
 export async function POST(request: Request) {
   try {
@@ -59,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const stripe = getStripe();
-    const siteUrl = getSiteUrl(request);
+    const siteUrl = getSiteUrlFromRequest(request);
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{

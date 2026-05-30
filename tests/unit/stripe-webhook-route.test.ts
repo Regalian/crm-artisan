@@ -38,6 +38,7 @@ function makeSubscription(overrides: Record<string, unknown> = {}) {
     object: "subscription",
     status: "active",
     customer: "cus_123",
+    cancel_at: null,
     cancel_at_period_end: false,
     current_period_start: 1_717_257_600,
     current_period_end: 1_719_849_600,
@@ -276,7 +277,7 @@ describe("POST /api/webhooks/stripe", () => {
     });
   });
 
-  it("marks billing as past due after invoice.payment_failed", async () => {
+  it("marks billing as retrying after invoice.payment_failed", async () => {
     constructEvent.mockReturnValue({
       id: "evt_invoice_failed",
       type: "invoice.payment_failed",
@@ -307,12 +308,113 @@ describe("POST /api/webhooks/stripe", () => {
     expect(billingUpserts[0]).toMatchObject({
       user_id: "user_123",
       plan_tier: "premium",
-      access_state: "past_due",
+      access_state: "payment_retrying",
       stripe_subscription_status: "past_due",
       last_invoice_id: "in_failed_123",
       last_invoice_status: "open",
     });
     expect(typeof billingUpserts[0].last_payment_failed_at).toBe("string");
+  });
+
+  it("marks billing as canceling when Stripe schedules cancellation at period end", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_subscription_updated_canceling",
+      type: "customer.subscription.updated",
+      livemode: false,
+      data: {
+        object: makeSubscription({
+          cancel_at_period_end: true,
+        }),
+      },
+    });
+
+    const response = await POST(new Request("http://localhost:3000/api/webhooks/stripe", {
+      method: "POST",
+      headers: {
+        "stripe-signature": "t=1,v1=signature",
+      },
+      body: "subscription-updated-canceling",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(billingUpserts[0]).toMatchObject({
+      user_id: "user_123",
+      plan_tier: "premium",
+      access_state: "premium_canceling",
+      cancel_at_period_end: true,
+    });
+  });
+
+  it("marks billing as canceling when Stripe schedules a future cancel_at date", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_subscription_updated_cancel_at",
+      type: "customer.subscription.updated",
+      livemode: false,
+      data: {
+        object: makeSubscription({
+          cancel_at: 1_720_108_800,
+          cancel_at_period_end: false,
+          current_period_end: null,
+          items: {
+            data: [
+              {
+                current_period_start: 1_717_257_600,
+                current_period_end: 1_720_108_800,
+                price: {
+                  id: "price_test_premium",
+                },
+              },
+            ],
+          },
+        }),
+      },
+    });
+
+    const response = await POST(new Request("http://localhost:3000/api/webhooks/stripe", {
+      method: "POST",
+      headers: {
+        "stripe-signature": "t=1,v1=signature",
+      },
+      body: "subscription-updated-cancel-at",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(billingUpserts[0]).toMatchObject({
+      user_id: "user_123",
+      plan_tier: "premium",
+      access_state: "premium_canceling",
+      cancel_at_period_end: true,
+      current_period_end: "2024-07-04T16:00:00.000Z",
+    });
+  });
+
+  it("marks billing as active again when a cancellation is resumed", async () => {
+    constructEvent.mockReturnValue({
+      id: "evt_subscription_updated_resumed",
+      type: "customer.subscription.updated",
+      livemode: false,
+      data: {
+        object: makeSubscription({
+          cancel_at_period_end: false,
+        }),
+      },
+    });
+
+    const response = await POST(new Request("http://localhost:3000/api/webhooks/stripe", {
+      method: "POST",
+      headers: {
+        "stripe-signature": "t=1,v1=signature",
+      },
+      body: "subscription-updated-resumed",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(billingUpserts[0]).toMatchObject({
+      user_id: "user_123",
+      plan_tier: "premium",
+      access_state: "premium_active",
+      cancel_at_period_end: false,
+    });
   });
 
   it("drops the account back to free after customer.subscription.deleted", async () => {

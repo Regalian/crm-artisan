@@ -34,14 +34,19 @@ function UserSection({ user }: { user: User | null }) {
   const initials = email.charAt(0).toUpperCase();
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2">
+    <Link
+      href="/billing"
+      className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800"
+      aria-label="Open billing settings"
+    >
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
         {initials}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">{email}</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">Manage billing</p>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -98,10 +103,10 @@ export function MobileAccountBar({ user }: { user: User | null }) {
 
   return (
     <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-zinc-800 dark:bg-black/95 md:hidden">
-      <div className="min-w-0">
+      <Link href="/billing" className="min-w-0 rounded-lg transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800" aria-label="Open billing settings">
         <p className="text-sm font-semibold text-zinc-900 dark:text-white">CRM Artisan</p>
         <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">Signed in as {email}</p>
-      </div>
+      </Link>
       <form action={logout}>
         <button
           type="submit"
