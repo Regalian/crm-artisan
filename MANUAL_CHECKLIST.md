@@ -56,7 +56,7 @@ where u.email = 'artisan@example.com';
 
 ```sql
 select event_id, event_type, livemode, processed_at
-from public.stripe_webhook_events
+from private.stripe_webhook_events
 order by processed_at desc
 limit 20;
 ```
@@ -78,7 +78,7 @@ curl -i -X POST http://192.168.0.116:3000/api/webhooks/stripe \
 ### Expected
 
 - HTTP `400`
-- no new row in `public.stripe_webhook_events`
+- no new row in `private.stripe_webhook_events`
 - no change to `public.account_billing`
 
 ---
@@ -118,7 +118,7 @@ You should see at least:
 - `stripe_price_id` populated
 - `last_payment_failed_at = null`
 
-`public.stripe_webhook_events` should contain rows for the received events.
+`private.stripe_webhook_events` should contain rows for the received events.
 
 ---
 
@@ -167,7 +167,7 @@ Automated unit tests already verify:
 
 Do this on a deployed/staging webhook endpoint registered in Stripe Dashboard:
 - resend the same `evt_...` event
-- confirm only one `event_id` row exists in `public.stripe_webhook_events`
+- confirm only one `event_id` row exists in `private.stripe_webhook_events`
 - confirm billing state does not change twice
 
 ---
@@ -212,7 +212,7 @@ Minimum local manual sign-off:
 - Test 3 passes
 
 Additional confidence:
-- review webhook ledger rows in `public.stripe_webhook_events`
+- review webhook ledger rows in `private.stripe_webhook_events`
 - run Test 5 when you are ready to test dunning behavior more deeply
 
 ---

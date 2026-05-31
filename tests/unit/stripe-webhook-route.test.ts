@@ -29,7 +29,7 @@ vi.mock("@/lib/stripe/server", () => ({
 
 import { POST } from "@/app/api/webhooks/stripe/route";
 
-type InsertResponse = { error: { code?: string | null; message?: string | null } | null };
+type RpcResponse<T> = { data: T; error: { code?: string | null; message?: string | null } | null };
 type SingleResponse = { data: { user_id: string } | null; error: { message?: string | null } | null };
 
 function makeSubscription(overrides: Record<string, unknown> = {}) {
@@ -64,7 +64,8 @@ describe("POST /api/webhooks/stripe", () => {
   let eventClaims: Array<Record<string, unknown>>;
   let billingUpserts: Array<Record<string, unknown>>;
   let releasedClaims: string[];
-  let webhookInsertResponse: InsertResponse;
+  let webhookClaimResponse: RpcResponse<boolean>;
+  let releaseClaimResponse: RpcResponse<boolean>;
   let billingLookupResponse: SingleResponse;
   let billingUpsertError: { message: string } | null;
 
@@ -77,7 +78,8 @@ describe("POST /api/webhooks/stripe", () => {
     eventClaims = [];
     billingUpserts = [];
     releasedClaims = [];
-    webhookInsertResponse = { error: null };
+    webhookClaimResponse = { data: true, error: null };
+    releaseClaimResponse = { data: true, error: null };
     billingLookupResponse = { data: null, error: null };
     billingUpsertError = null;
 
@@ -86,22 +88,20 @@ describe("POST /api/webhooks/stripe", () => {
     createAdminClient.mockReset();
 
     createAdminClient.mockImplementation(() => ({
-      from(table: string) {
-        if (table === "stripe_webhook_events") {
-          return {
-            insert: async (payload: Record<string, unknown>) => {
-              eventClaims.push(payload);
-              return webhookInsertResponse;
-            },
-            delete: () => ({
-              eq: async (_column: string, value: string) => {
-                releasedClaims.push(value);
-                return { error: null };
-              },
-            }),
-          };
+      rpc(fn: string, args: Record<string, unknown>) {
+        if (fn === "claim_stripe_webhook_event") {
+          eventClaims.push(args);
+          return Promise.resolve(webhookClaimResponse);
         }
 
+        if (fn === "release_stripe_webhook_event_claim") {
+          releasedClaims.push(args.p_event_id as string);
+          return Promise.resolve(releaseClaimResponse);
+        }
+
+        throw new Error(`Unexpected rpc mock: ${fn}`);
+      },
+      from(table: string) {
         if (table === "account_billing") {
           return {
             upsert: async (payload: Record<string, unknown>) => {
@@ -179,8 +179,8 @@ describe("POST /api/webhooks/stripe", () => {
 
     expect(response.status).toBe(200);
     expect(eventClaims[0]).toMatchObject({
-      event_id: "evt_checkout_completed",
-      event_type: "checkout.session.completed",
+      p_event_id: "evt_checkout_completed",
+      p_event_type: "checkout.session.completed",
     });
     expect(retrieveSubscription).toHaveBeenCalledWith("sub_123", {
       expand: ["latest_invoice", "items.data.price"],
@@ -218,11 +218,9 @@ describe("POST /api/webhooks/stripe", () => {
       },
     });
 
-    webhookInsertResponse = {
-      error: {
-        code: "23505",
-        message: "duplicate key value violates unique constraint",
-      },
+    webhookClaimResponse = {
+      data: false,
+      error: null,
     };
 
     const response = await POST(new Request("http://localhost:3000/api/webhooks/stripe", {

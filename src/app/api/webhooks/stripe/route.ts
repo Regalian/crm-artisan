@@ -74,14 +74,6 @@ function getStripeId(value: unknown) {
   return null;
 }
 
-function isDuplicateInsertError(error: { code?: string | null; message?: string | null } | null) {
-  if (!error) {
-    return false;
-  }
-
-  return error.code === "23505" || error.message?.toLowerCase().includes("duplicate key") === true;
-}
-
 function hasScheduledCancellation(subscription: Stripe.Subscription) {
   return Boolean(subscription.cancel_at_period_end || subscription.cancel_at);
 }
@@ -125,27 +117,25 @@ function getSubscriptionUpdatedState(subscription: Stripe.Subscription): { planT
 
 async function rememberEvent(event: Stripe.Event) {
   const admin = createAdminClient();
-  const { error } = await admin.from("stripe_webhook_events").insert({
-    event_id: event.id,
-    event_type: event.type,
-    livemode: event.livemode,
-    payload: event,
+  const { data, error } = await admin.rpc("claim_stripe_webhook_event", {
+    p_event_id: event.id,
+    p_event_type: event.type,
+    p_livemode: event.livemode,
+    p_payload: event,
   });
-
-  if (isDuplicateInsertError(error)) {
-    return false;
-  }
 
   if (error) {
     throw error;
   }
 
-  return true;
+  return data === true;
 }
 
 async function forgetEvent(eventId: string) {
   const admin = createAdminClient();
-  const { error } = await admin.from("stripe_webhook_events").delete().eq("event_id", eventId);
+  const { error } = await admin.rpc("release_stripe_webhook_event_claim", {
+    p_event_id: eventId,
+  });
 
   if (error) {
     console.error("Failed to release Stripe webhook event claim:", eventId, error);
