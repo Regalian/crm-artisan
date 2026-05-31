@@ -78,6 +78,40 @@ export async function createJobSiteViaUi(page: Page, jobSite: JobSiteFormInput):
   return jobSiteRow;
 }
 
+export async function createQuoteAndDownloadPdf(page: Page, jobSiteTitle: string): Promise<string> {
+  await page.goto("/job-sites");
+
+  const jobSiteRow = getTableRowByText(page, jobSiteTitle);
+  await expect(jobSiteRow).toBeVisible();
+  await jobSiteRow.locator("button[aria-label='Create quote']").click();
+
+  await expect(page.getByRole("heading", { name: /new quote/i })).toBeVisible({ timeout: 5000 });
+
+  await page.getByRole("button", { name: /add item/i }).click();
+  await page.getByLabel("Description").first().fill("Verification labour");
+  await page.getByLabel("Qty").first().fill("2");
+  await page.getByLabel("Unit Price (£)").first().fill("50");
+
+  await page.getByRole("button", { name: /save as draft/i }).click();
+  await expect(page.getByRole("heading", { level: 1, name: /^Q-\d{3}$/ })).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole("button", { name: /send quote/i }).click();
+  await expect(page.getByRole("heading", { name: /send quote\?/i })).toBeVisible({ timeout: 5000 });
+  await page.getByRole("button", { name: /^send$/i }).click();
+  await expect(page.getByText("Sent")).toBeVisible({ timeout: 5000 });
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name: /download pdf/i }).click(),
+  ]);
+
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  expect(download.suggestedFilename()).toMatch(/Q-\d{3}\.pdf$/);
+
+  return download.suggestedFilename();
+}
+
 export async function deleteClientsMatching(page: Page, rowText: string): Promise<void> {
   await page.goto("/clients");
   await page.waitForLoadState("networkidle");

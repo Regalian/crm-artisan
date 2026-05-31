@@ -34,18 +34,26 @@ function toIsoFromUnixTimestamp(value: number | null | undefined) {
 }
 
 function getSubscriptionEffectivePeriodStart(subscription: Stripe.Subscription) {
+  const subscriptionWithPeriodFields = subscription as Stripe.Subscription & {
+    current_period_start?: number | null;
+  };
+
   return toIsoFromUnixTimestamp(
-    subscription.current_period_start ?? subscription.items.data[0]?.current_period_start ?? null,
+    subscriptionWithPeriodFields.current_period_start ?? subscription.items.data[0]?.current_period_start ?? null,
   );
 }
 
 function getSubscriptionEffectivePeriodEnd(subscription: Stripe.Subscription) {
+  const subscriptionWithPeriodFields = subscription as Stripe.Subscription & {
+    current_period_end?: number | null;
+  };
+
   return toIsoFromUnixTimestamp(
-    subscription.cancel_at ?? subscription.current_period_end ?? subscription.items.data[0]?.current_period_end ?? null,
+    subscription.cancel_at ?? subscriptionWithPeriodFields.current_period_end ?? subscription.items.data[0]?.current_period_end ?? null,
   );
 }
 
-function getStripeId(value: string | Stripe.Response<object> | Stripe.DeletedCustomer | Stripe.Invoice | Stripe.Subscription | null | undefined) {
+function getStripeId(value: unknown) {
   if (!value) {
     return null;
   }
@@ -54,8 +62,13 @@ function getStripeId(value: string | Stripe.Response<object> | Stripe.DeletedCus
     return value;
   }
 
-  if ("id" in value && typeof value.id === "string") {
-    return value.id;
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof (value as { id?: unknown }).id === "string"
+  ) {
+    return (value as { id: string }).id;
   }
 
   return null;
@@ -265,7 +278,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 }
 
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = getStripeId(invoice.subscription);
+  const invoiceWithSubscription = invoice as Stripe.Invoice & { subscription?: unknown };
+  const subscriptionId = getStripeId(invoiceWithSubscription.subscription);
   const customerId = getStripeId(invoice.customer);
 
   if (!subscriptionId) {
@@ -295,7 +309,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  const subscriptionId = getStripeId(invoice.subscription);
+  const invoiceWithSubscription = invoice as Stripe.Invoice & { subscription?: unknown };
+  const subscriptionId = getStripeId(invoiceWithSubscription.subscription);
   const customerId = getStripeId(invoice.customer);
 
   if (!subscriptionId) {

@@ -35,7 +35,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         storageState: "tests/auth.json",
       },
-      testMatch: /clients\.spec\.ts|quotes\.spec\.ts/,
+      testMatch: /clients\.spec\.ts|quotes\.spec\.ts|subscription-regression\.spec\.ts/,
     },
     {
       name: "chromium-no-auth",

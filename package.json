@@ -16,7 +16,7 @@
     "test:e2e": "node ./scripts/with-local-supabase.mjs playwright test",
     "test:e2e:browser": "node ./scripts/with-local-supabase.mjs playwright test --project=chromium-no-auth --project=chromium-auth",
     "test:e2e:auth": "node ./scripts/with-local-supabase.mjs playwright test tests/auth.spec.ts --project=chromium-no-auth",
-    "test:e2e:flows": "node ./scripts/with-local-supabase.mjs playwright test tests/clients.spec.ts tests/quotes.spec.ts --project=chromium-auth",
+    "test:e2e:flows": "node ./scripts/with-local-supabase.mjs playwright test tests/clients.spec.ts tests/quotes.spec.ts tests/subscription-regression.spec.ts --project=chromium-auth",
     "test:security": "node ./scripts/with-local-supabase.mjs playwright test --project=chromium-security --project=api-security",
     "test:all": "npm run test && npm run test:e2e"
   },

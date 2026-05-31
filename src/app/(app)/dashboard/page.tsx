@@ -28,7 +28,7 @@ export default async function DashboardPage({
     getDashboardSummary(),
     getRecentActivity(5),
     getCurrentAccountBilling(),
-    searchParams ?? Promise.resolve({}),
+    searchParams ?? Promise.resolve<{ upgraded?: string; billingError?: string }>({}),
   ]);
 
   const showUpgradeButton = isFreePlan(billing);

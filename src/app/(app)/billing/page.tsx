@@ -112,7 +112,7 @@ export default async function BillingPage({
 }) {
   const [billing, resolvedSearchParams] = await Promise.all([
     getCurrentAccountBilling(),
-    searchParams ?? Promise.resolve({}),
+    searchParams ?? Promise.resolve<{ portalError?: string }>({}),
   ]);
 
   const currentPeriodEnd = formatDate(billing.currentPeriodEnd);
